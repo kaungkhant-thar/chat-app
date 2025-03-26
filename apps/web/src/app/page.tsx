@@ -1,6 +1,21 @@
-import { trpc } from "./trpc";
+"use client";
 
-export default async function Home() {
-  const res = await trpc.hello.query({ name: "Kaung Khant Thar" });
-  return <div>{res}</div>;
+import { useQuery } from "@tanstack/react-query";
+import { useTRPC } from "../utils/trpc";
+import { Client } from "./components/client";
+
+export default function Home() {
+  const trpc = useTRPC();
+
+  const { data } = useQuery(
+    trpc.hello.queryOptions({ name: "Kaung Khant Thar" })
+  );
+
+  return (
+    <div>
+      {data}
+
+      <Client />
+    </div>
+  );
 }
