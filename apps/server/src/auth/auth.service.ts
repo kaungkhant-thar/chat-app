@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { comparePassword, hashPassword } from '@server/utils/password';
@@ -8,6 +9,7 @@ export class AuthService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
   ) {}
 
   async signup(email: string, password: string) {
@@ -43,6 +45,10 @@ export class AuthService {
   }
 
   private generateToken(user: { id: string; email: string }) {
-    return this.jwtService.sign({ sub: user.id, email: user.email });
+    const payload = { sub: user.id, email: user.email };
+    return this.jwtService.signAsync(payload, {
+      secret: this.configService.getOrThrow<string>('JWT_SECRET'),
+      expiresIn: '7d',
+    });
   }
 }

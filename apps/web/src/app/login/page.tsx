@@ -10,7 +10,7 @@ import {
   FormMessage,
 } from "@web/components/ui/form";
 import { useTRPC } from "@web/utils/trpc";
-import { signupSchema } from "@shared/schemas";
+import { loginSchema } from "@shared/schemas";
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,26 +20,27 @@ import { Input } from "@web/components/ui/input";
 import { toast } from "sonner";
 import Link from "next/link";
 
-type SignUpFormValues = z.infer<typeof signupSchema>;
+type SignUpFormValues = z.infer<typeof loginSchema>;
 
 const SignUpForm = () => {
   const trpc = useTRPC();
 
   const form = useForm<SignUpFormValues>({
-    resolver: zodResolver(signupSchema),
+    resolver: zodResolver(loginSchema),
     defaultValues: {
       email: "",
       password: "",
     },
   });
 
-  const signUpMutation = useMutation(trpc.signup.mutationOptions());
+  const loginMutation = useMutation(trpc.login.mutationOptions());
 
   const onSubmit = async (values: SignUpFormValues) => {
     try {
-      const result = await signUpMutation.mutateAsync(values);
-      console.log({ result }); // TODO: need to store token
+      const result = await loginMutation.mutateAsync(values);
+      console.log({ result });
     } catch (error) {
+      console.log({ error });
       if (error instanceof Error) {
         toast.error(error.message);
       }
@@ -48,10 +49,12 @@ const SignUpForm = () => {
 
   return (
     <section className="max-w-sm mx-auto min-h-screen my-20">
-      <h3 className="text-3xl font-bold mb-2">Register a user</h3>
-      <Link href="/login ">
-        <p className="mb-8 underline">Already have account?</p>
+      <h3 className="text-3xl font-bold mb-2">Login</h3>
+
+      <Link href="/signup ">
+        <p className="mb-8 underline">Don't have account yet?</p>
       </Link>
+
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField
@@ -82,8 +85,8 @@ const SignUpForm = () => {
             )}
           />
 
-          <Button type="submit" disabled={signUpMutation.isPending}>
-            {signUpMutation.isPending ? "Signing up..." : "Sign Up"}
+          <Button type="submit" disabled={loginMutation.isPending}>
+            {loginMutation.isPending ? "Login..." : "Login"}
           </Button>
         </form>
       </Form>
