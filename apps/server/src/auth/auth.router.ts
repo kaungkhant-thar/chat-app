@@ -1,5 +1,6 @@
 import { procedure, router } from '@server/trpc/trpc';
-import { loginSchema, signupSchema } from './auth.schema';
+
+import { signupSchema, loginSchema } from '@shared/schemas';
 
 export const authRouter = router({
   signup: procedure.input(signupSchema).mutation(async ({ input, ctx }) => {
