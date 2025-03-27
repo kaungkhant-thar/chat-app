@@ -1,23 +1,6 @@
-import { INestApplication, Injectable } from '@nestjs/common';
-import { TrpcService } from './trpc.service';
-import { z } from 'zod';
-import { createExpressMiddleware } from '@trpc/server/adapters/express';
+import { authRouter } from '@server/auth/auth.router';
+import { mergeRouters, router } from './trpc';
 
-@Injectable()
-export class TrpcRouter {
-  constructor(private readonly trpcService: TrpcService) {}
+export const appRouter = mergeRouters(authRouter);
 
-  appRouter = this.trpcService.router({
-    hello: this.trpcService.procedure
-      .input(z.object({ name: z.string() }))
-      .query(({ input }) => {
-        return `Hello ${input.name}`;
-      }),
-  });
-
-  async applyMiddleare(app: INestApplication) {
-    app.use('/trpc', createExpressMiddleware({ router: this.appRouter }));
-  }
-}
-
-export type AppRouter = TrpcRouter['appRouter'];
+export type AppRouter = typeof appRouter;
