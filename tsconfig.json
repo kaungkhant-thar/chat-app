@@ -12,8 +12,8 @@
     "noFallthroughCasesInSwitch": true,
     "paths": {
       "@server/*": ["./apps/server/src/*"],
-      "@web/*": ["./apps/web/*"],
-      "@shared/*": ["./libs/shared/src/*"]
+      "@web/*": ["./apps/web/src/*"],
+      "@shared/*": ["./libs/shared-schemas/src/*"]
     }
   }
 }

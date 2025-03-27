@@ -24,6 +24,7 @@ export class AuthService {
       return this.generateToken(user);
     } catch (error) {
       console.log(error, 'from signup');
+      throw new Error('User already exists');
     }
   }
 
