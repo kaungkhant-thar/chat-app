@@ -9,7 +9,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@web/components/ui/form";
-import { useTRPC } from "@web/utils/trpc";
+import { useTRPC } from "@web/lib/trpc";
 import { loginSchema } from "@shared/schemas";
 
 import { useForm } from "react-hook-form";
@@ -19,11 +19,16 @@ import { Button } from "@web/components/ui/button";
 import { Input } from "@web/components/ui/input";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useAuthStore } from "@web/store/auth";
+import { useRouter } from "next/navigation";
 
 type SignUpFormValues = z.infer<typeof loginSchema>;
 
 const SignUpForm = () => {
   const trpc = useTRPC();
+  const { token, isAuthenticated, setToken } = useAuthStore();
+  console.log({ token, isAuthenticated });
+  const router = useRouter();
 
   const form = useForm<SignUpFormValues>({
     resolver: zodResolver(loginSchema),
@@ -37,8 +42,9 @@ const SignUpForm = () => {
 
   const onSubmit = async (values: SignUpFormValues) => {
     try {
-      const result = await loginMutation.mutateAsync(values);
-      console.log({ result });
+      const token = await loginMutation.mutateAsync(values);
+      setToken(token);
+      router.push("/");
     } catch (error) {
       console.log({ error });
       if (error instanceof Error) {

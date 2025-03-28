@@ -44,11 +44,29 @@ export class AuthService {
     return this.generateToken(user);
   }
 
+  async profile(userId: string) {
+    return this.prismaService.user.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+  }
+
   private generateToken(user: { id: string; email: string }) {
     const payload = { sub: user.id, email: user.email };
     return this.jwtService.signAsync(payload, {
       secret: this.configService.getOrThrow<string>('JWT_SECRET'),
       expiresIn: '7d',
     });
+  }
+
+  async verifyToken(token: string) {
+    try {
+      return this.jwtService.verify(token, {
+        secret: this.configService.getOrThrow<string>('JWT_SECRET'),
+      });
+    } catch (error) {
+      console.log({ error });
+    }
   }
 }

@@ -5,6 +5,7 @@ import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import { useState } from "react";
 import { TRPCProvider, useTRPC } from "./trpc";
 import type { AppRouter } from "@server/trpc/trpc.router";
+import { useAuthStore } from "@web/store/auth";
 
 function makeQueryClient() {
   return new QueryClient({
@@ -31,17 +32,30 @@ function getQueryClient() {
     return browserQueryClient;
   }
 }
-export function Providers({ children }: { children: React.ReactNode }) {
-  const queryClient = getQueryClient();
+
+function useTrpcClient() {
   const [trpcClient] = useState(() =>
     createTRPCClient<AppRouter>({
       links: [
         httpBatchLink({
           url: "http://localhost:4000/trpc",
+          headers() {
+            const token = useAuthStore.getState().token;
+            return {
+              Authorization: token ? `Bearer ${token}` : "",
+              "Content-Type": "application/json",
+            };
+          },
         }),
       ],
     })
   );
+  return trpcClient;
+}
+export function Providers({ children }: { children: React.ReactNode }) {
+  const queryClient = getQueryClient();
+
+  const trpcClient = useTrpcClient();
   return (
     <QueryClientProvider client={queryClient}>
       <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
