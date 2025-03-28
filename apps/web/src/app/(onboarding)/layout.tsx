@@ -9,7 +9,6 @@ const OnboardingLayout = ({ children }: { children: React.ReactNode }) => {
   const router = useRouter();
   useEffect(() => {
     if (isAuthenticated) {
-      console.log("User is authenticated");
       router.push("/");
     }
   }, [isAuthenticated]);

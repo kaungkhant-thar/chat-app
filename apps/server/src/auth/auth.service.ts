@@ -60,13 +60,29 @@ export class AuthService {
     });
   }
 
-  async verifyToken(token: string) {
+  async verifyToken(
+    token: string,
+  ): Promise<{ userId: string; email: string } | null> {
+    if (!token) {
+      return null;
+    }
+
     try {
-      return this.jwtService.verify(token, {
+      const payload = await this.jwtService.verifyAsync(token, {
         secret: this.configService.getOrThrow<string>('JWT_SECRET'),
       });
+
+      // Validate payload structure
+      if (!payload?.sub || !payload?.email) {
+        return null;
+      }
+
+      return {
+        userId: payload.sub,
+        email: payload.email,
+      };
     } catch (error) {
-      console.log({ error });
+      return null;
     }
   }
 }

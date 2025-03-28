@@ -14,7 +14,6 @@ export const authRouter = router({
   }),
 
   profile: protectedProcedure.query(async ({ input, ctx }) => {
-    console.log(ctx.user, 'from profile');
     return ctx.user;
   }),
 });
