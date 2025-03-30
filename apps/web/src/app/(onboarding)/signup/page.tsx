@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Form,
   FormControl,
@@ -28,10 +28,12 @@ const SignUpForm = () => {
   const trpc = useTRPC();
   const { setToken } = useAuthStore();
   const router = useRouter();
+  const client = useQueryClient();
 
   const form = useForm<SignUpFormValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
+      name: "",
       email: "",
       password: "",
     },
@@ -44,6 +46,7 @@ const SignUpForm = () => {
       const token = await signUpMutation.mutateAsync(values);
       setToken(token);
       router.push("/");
+      client.refetchQueries(trpc.findOtherUsers.queryOptions());
     } catch (error) {
       if (error instanceof Error) {
         toast.error(error.message);
@@ -59,6 +62,19 @@ const SignUpForm = () => {
       </Link>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Username</FormLabel>
+                <FormControl>
+                  <Input placeholder="John Doe" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           <FormField
             control={form.control}
             name="email"

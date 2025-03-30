@@ -8,11 +8,10 @@ import Sidebar from "./sidebar";
 
 const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, hasHydrated } = useAuthStore();
-
   const router = useRouter();
   useEffect(() => {
     if (hasHydrated && !isAuthenticated) {
-      router.push("/");
+      router.push("/login");
     }
   }, [hasHydrated, isAuthenticated]);
 

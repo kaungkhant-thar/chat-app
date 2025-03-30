@@ -3,7 +3,12 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { comparePassword, hashPassword } from '@server/utils/password';
+import { SignupInput } from '@shared/schemas';
 
+type Payload = {
+  sub: string;
+  email: string;
+};
 @Injectable()
 export class AuthService {
   constructor(
@@ -12,12 +17,13 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {}
 
-  async signup(email: string, password: string) {
+  async signup({ name, email, password }: SignupInput) {
     try {
       const hashedPassword = await hashPassword(password);
 
       const user = await this.prismaService.user.create({
         data: {
+          name,
           email,
           password: hashedPassword,
         },
@@ -68,7 +74,7 @@ export class AuthService {
     }
 
     try {
-      const payload = await this.jwtService.verifyAsync(token, {
+      const payload = await this.jwtService.verifyAsync<Payload>(token, {
         secret: this.configService.getOrThrow<string>('JWT_SECRET'),
       });
 
@@ -82,6 +88,12 @@ export class AuthService {
         email: payload.email,
       };
     } catch (error) {
+      if (error instanceof Error) {
+        console.error('Token verification error:', error.message);
+      }
+      // Token is invalid or expired
+      // Handle the error as needed (e.g., log it, throw an exception, etc.)
+      // For now, just return null
       return null;
     }
   }
