@@ -6,6 +6,7 @@ import { useState } from "react";
 import { TRPCProvider, useTRPC } from "./trpc";
 import type { AppRouter } from "@server/trpc/trpc.router";
 import { useAuthStore } from "@web/store/auth";
+import { SocketProvider } from "@web/context/socket.context";
 
 function makeQueryClient() {
   return new QueryClient({
@@ -59,7 +60,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
-        {children}
+        <SocketProvider>{children}</SocketProvider>
       </TRPCProvider>
     </QueryClientProvider>
   );

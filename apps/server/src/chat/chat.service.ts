@@ -1,9 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
+import { ChatGateway } from './chat.gateway';
+import { SendMessageInput } from '@shared/schemas';
 
 @Injectable()
 export class ChatsService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly chatGateway: ChatGateway,
+  ) {}
 
   async getChatByUsersIds(userIds: string[]) {
     const chat = await this.prismaService.chat.findFirst({
@@ -15,6 +20,9 @@ export class ChatsService {
             },
           },
         },
+      },
+      include: {
+        messages: true,
       },
     });
     return chat;
@@ -33,5 +41,17 @@ export class ChatsService {
     });
 
     return chat;
+  }
+
+  async sendMessage({ chatId, content }: SendMessageInput, userId: string) {
+    const message = await this.prismaService.message.create({
+      data: {
+        content,
+        senderId: userId,
+        chatId,
+      },
+    });
+
+    this.chatGateway.server.emit('message', message);
   }
 }

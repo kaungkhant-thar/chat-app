@@ -11,3 +11,10 @@ export const GetChatSchema = z.object({
 });
 
 export type GetChatInput = z.infer<typeof GetChatSchema>;
+
+export const SendMessageSchema = z.object({
+  chatId: z.string().uuid(),
+  content: z.string().min(1),
+});
+
+export type SendMessageInput = z.infer<typeof SendMessageSchema>;
