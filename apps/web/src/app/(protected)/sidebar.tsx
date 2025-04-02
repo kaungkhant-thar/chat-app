@@ -9,7 +9,7 @@ const Sidebar = () => {
   const { data: users = [] } = useQuery(trpc.findOtherUsers.queryOptions());
 
   return (
-    <aside>
+    <aside className="border-r min-h-screen">
       <ul className="space-y-3 p-4">
         {users.map((user) => (
           <li key={user.id} className="border-b  pb-2">
