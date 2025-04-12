@@ -68,6 +68,7 @@ const Page = () => {
 
               sendMessageMutation.mutateAsync({
                 chatId: chat.id,
+                // @ts-ignore
                 content: e.target.message.value,
               });
             }}
