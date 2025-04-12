@@ -39,7 +39,7 @@ function useTrpcClient() {
     createTRPCClient<AppRouter>({
       links: [
         httpBatchLink({
-          url: "http://localhost:4000/trpc",
+          url: `${process.env.NEXT_PUBLIC_API_URL}/trpc`,
           headers() {
             const token = useAuthStore.getState().token;
             return {
