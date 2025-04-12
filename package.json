@@ -5,7 +5,11 @@
   "main": "index.js",
   "scripts": {
     "dev": "pnpm run --parallel dev",
-    "build": "pnpm run --parallel build"
+    "prebuild": " pnpm --filter=schemas  build ",
+    "build:server": "pnpm run prebuild && pnpm --filter server build",
+    "build:web": "pnpm run prebuild && pnpm --filter web build",
+    "start:server": "pnpm --filter server start:prod",
+    "start:web": "pnpm --filter web start"
   },
   "keywords": [],
   "author": "",

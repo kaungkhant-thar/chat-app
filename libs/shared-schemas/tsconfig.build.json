@@ -1,12 +1,12 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "../../tsconfig.json", // Inherit from the root tsconfig.json
   "compilerOptions": {
-    "composite": true,
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "skipLibCheck": true, // Add this to skip type checking of declaration files
-    "isolatedModules": true
+    "composite": true, // Enable composite project to use with other TypeScript projects
+    "outDir": "./dist", // Output directory for compiled files
+    "rootDir": "./src", // Root directory for source files
+    "skipLibCheck": true, // Skip type checking of declaration files
+    "isolatedModules": true // Ensure each file can be safely transpiled independently
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.spec.ts", "**/*.test.ts"]
+  "include": ["src/**/*"], // Include all source files inside 'src'
+  "exclude": ["node_modules", "dist", "**/*.spec.ts", "**/*.test.ts"] // Exclude test files, node_modules, and dist
 }
