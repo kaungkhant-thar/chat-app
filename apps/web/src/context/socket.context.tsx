@@ -17,7 +17,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const { token } = useAuthStore();
 
   useEffect(() => {
-    const socketInstance = io("http://localhost:4000/", {
+    const socketInstance = io(process.env.NEXT_PUBLIC_API_URL, {
       auth: {
         token,
       },
