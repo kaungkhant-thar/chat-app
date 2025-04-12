@@ -10,7 +10,7 @@
     "build:web": "pnpm run prebuild && pnpm --filter web build",
     "start:server": "pnpm --filter server start:prod",
     "start:web": "pnpm --filter web start",
-    "postinstall": "prisma generate"
+    "postinstall": "pnpm --filter server exec prisma generate"
   },
   "keywords": [],
   "author": "",
