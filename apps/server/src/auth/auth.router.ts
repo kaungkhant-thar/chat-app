@@ -1,11 +1,10 @@
 import { procedure, protectedProcedure, router } from '@server/trpc/trpc';
 
-import { signupSchema, loginSchema, profileSchema } from '@shared/schemas';
+import { signupSchema, loginSchema } from '@shared/schemas';
 
 export const authRouter = router({
   signup: procedure.input(signupSchema).mutation(async ({ input, ctx }) => {
-    const { email, password } = input;
-    return ctx.authService.signup(email, password);
+    return ctx.authService.signup(input);
   }),
 
   login: procedure.input(loginSchema).mutation(async ({ input, ctx }) => {
@@ -13,8 +12,7 @@ export const authRouter = router({
     return ctx.authService.login(email, password);
   }),
 
-  profile: protectedProcedure.query(async ({ input, ctx }) => {
-    console.log(ctx.user, 'from profile');
+  profile: protectedProcedure.query(({ ctx }) => {
     return ctx.user;
   }),
 });

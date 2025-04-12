@@ -4,14 +4,14 @@ import { useAuthStore } from "@web/store/auth";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect } from "react";
+import Sidebar from "./sidebar";
 
 const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, hasHydrated } = useAuthStore();
-
   const router = useRouter();
   useEffect(() => {
     if (hasHydrated && !isAuthenticated) {
-      router.push("/");
+      router.push("/login");
     }
   }, [hasHydrated, isAuthenticated]);
 
@@ -23,7 +23,12 @@ const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  return children;
+  return (
+    <section className="grid grid-cols-[300px_1fr]">
+      <Sidebar />
+      {children}
+    </section>
+  );
 };
 
 export default ProtectedLayout;

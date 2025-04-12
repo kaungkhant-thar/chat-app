@@ -8,7 +8,9 @@ export const procedure = t.procedure;
 export const mergeRouters = t.mergeRouters;
 export const middleware = t.middleware;
 
-const isAuthenticated = middleware(async ({ ctx, next }) => {
+export const protectedProcedure = procedure.use(async (opts) => {
+  const { ctx } = opts;
+
   const token = ctx.req.headers.authorization;
 
   if (!token) {
@@ -22,9 +24,9 @@ const isAuthenticated = middleware(async ({ ctx, next }) => {
     throw new Error('Unauthorized');
   }
 
-  return next({ ctx: { ...ctx, user } });
+  return opts.next({
+    ctx: {
+      user,
+    },
+  });
 });
-
-export const protectedProcedure = t.procedure.use(
-  isAuthenticated,
-) as typeof procedure;

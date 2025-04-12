@@ -3,7 +3,12 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { comparePassword, hashPassword } from '@server/utils/password';
+import { SignupInput } from '@shared/schemas';
 
+type Payload = {
+  sub: string;
+  email: string;
+};
 @Injectable()
 export class AuthService {
   constructor(
@@ -12,12 +17,13 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {}
 
-  async signup(email: string, password: string) {
+  async signup({ name, email, password }: SignupInput) {
     try {
       const hashedPassword = await hashPassword(password);
 
       const user = await this.prismaService.user.create({
         data: {
+          name,
           email,
           password: hashedPassword,
         },
@@ -25,7 +31,6 @@ export class AuthService {
 
       return this.generateToken(user);
     } catch (error) {
-      console.log(error, 'from signup');
       throw new Error('User already exists');
     }
   }
@@ -60,13 +65,35 @@ export class AuthService {
     });
   }
 
-  async verifyToken(token: string) {
+  async verifyToken(
+    token: string,
+  ): Promise<{ userId: string; email: string } | null> {
+    if (!token) {
+      return null;
+    }
+
     try {
-      return this.jwtService.verify(token, {
+      const payload = await this.jwtService.verifyAsync<Payload>(token, {
         secret: this.configService.getOrThrow<string>('JWT_SECRET'),
       });
+
+      // Validate payload structure
+      if (!payload?.sub || !payload?.email) {
+        return null;
+      }
+
+      return {
+        userId: payload.sub,
+        email: payload.email,
+      };
     } catch (error) {
-      console.log({ error });
+      if (error instanceof Error) {
+        console.error('Token verification error:', error.message);
+      }
+      // Token is invalid or expired
+      // Handle the error as needed (e.g., log it, throw an exception, etc.)
+      // For now, just return null
+      return null;
     }
   }
 }
