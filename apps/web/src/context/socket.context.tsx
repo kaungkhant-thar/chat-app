@@ -15,19 +15,20 @@ const SocketContext = createContext<SocketContextType>({
 export function SocketProvider({ children }: { children: React.ReactNode }) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const { token } = useAuthStore();
+
   useEffect(() => {
     const socketInstance = io("http://localhost:4000/", {
       auth: {
         token,
       },
     });
-    console.log({ socketInstance });
+
     setSocket(socketInstance);
 
     return () => {
       socketInstance.disconnect();
     };
-  }, []);
+  }, [token]);
 
   return (
     <SocketContext.Provider value={{ socket }}>

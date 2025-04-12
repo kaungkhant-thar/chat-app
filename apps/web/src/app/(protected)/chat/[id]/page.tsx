@@ -6,7 +6,8 @@ import { useSocket } from "@web/context/socket.context";
 import { useTRPC } from "@web/lib/trpc";
 import { useParams } from "next/navigation";
 import React, { useEffect } from "react";
-import { ChatMessage } from "@shared/types";
+import { ChatMessage } from "@shared/schemas";
+import Call from "./call";
 
 const Page = () => {
   const params = useParams<{ id: string }>();
@@ -20,7 +21,6 @@ const Page = () => {
       userIds: [userId],
     })
   );
-  console.log({ chat });
 
   const createChatMutation = useMutation(trpc.createChat.mutationOptions());
   const sendMessageMutation = useMutation(trpc.sendMessage.mutationOptions());
@@ -53,6 +53,7 @@ const Page = () => {
 
   return (
     <div>
+      <Call userId={userId} />
       {chat ? (
         <div>
           <ul>
