@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "../lib/query-client";
 import { Toaster } from "@web/components/ui/sonner";
+import { WebRTCProvider } from "@web/context/webrtc.context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,7 +30,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Providers>{children}</Providers>
+        <Providers>
+          <WebRTCProvider>{children}</WebRTCProvider>
+        </Providers>
         <Toaster />
       </body>
     </html>
