@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 
 export const useWebRTC = () => {
   const { socket } = useSocket();
-
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [peerConnection, setPeerConnection] =
@@ -11,6 +10,8 @@ export const useWebRTC = () => {
   const toUserIdRef = useRef("");
 
   useEffect(() => {
+    if (!socket?.connected) return;
+
     window.navigator.mediaDevices
       .getUserMedia({ video: true, audio: true })
       .then((stream) => {
@@ -25,23 +26,24 @@ export const useWebRTC = () => {
         });
 
         stream.getTracks().forEach((track) => {
-          pc.addTrack(track);
+          pc.addTrack(track, stream);
         });
 
         pc.onicecandidate = (event) => {
-          console.log("on ice candidate", event);
           if (event.candidate) {
-            console.log("emitting ice candidate", event.candidate);
-            socket?.emit("ice-candidate", {
+            socket?.emit("webrtc-ice-candidate", {
               toUserId: toUserIdRef.current,
-              candidaate: event.candidate,
+              candidate: event.candidate,
             });
           }
         };
+
         pc.ontrack = (event) => {
           const [remoteStream] = event.streams;
           setRemoteStream(remoteStream);
         };
+
+        setPeerConnection(pc);
       })
       .catch((error) => {
         console.error("Error accessing media devices.", error);
@@ -52,7 +54,39 @@ export const useWebRTC = () => {
         peerConnection.close();
       }
     };
-  }, []);
+  }, [socket?.connected]);
+
+  useEffect(() => {
+    if (!socket?.connected) return;
+
+    socket?.on("webrtc-ice-candidate", (data) => {
+      const { candidate } = data;
+      if (!candidate) return;
+      addIceCandidate(new RTCIceCandidate(candidate));
+    });
+
+    socket?.on("incoming-call", (data) => {
+      const { fromUserId, offer } = data;
+      if (
+        window.confirm(
+          `Incoming call from ${fromUserId}. Do you want to answer?`
+        )
+      ) {
+        answerCall(fromUserId, offer);
+      }
+    });
+
+    socket?.on("call-answered", (data) => {
+      const { answer } = data;
+      peerConnection?.setRemoteDescription(new RTCSessionDescription(answer));
+    });
+
+    return () => {
+      socket?.off("webrtc-ice-candidate");
+      socket?.off("incoming-call");
+      socket?.off("call-answered");
+    };
+  }, [socket?.connected, peerConnection]);
 
   const startCall = (toUserId: string) => {
     if (!peerConnection || !localStream) return;
@@ -92,45 +126,11 @@ export const useWebRTC = () => {
   };
 
   const addIceCandidate = (candidate: RTCIceCandidate) => {
-    console.log({ candidate }, "adding ice candidate");
     if (!peerConnection) return;
-
     peerConnection.addIceCandidate(candidate).catch((error) => {
       console.error("Error adding ice candidate", error);
     });
   };
-
-  useEffect(() => {
-    socket?.on("incoming-call", (data) => {
-      const { fromUserId, offer, type } = data;
-
-      if (
-        window.confirm(
-          `Incoming call from ${fromUserId}. Do you want to answer?`
-        )
-      ) {
-        answerCall(fromUserId, offer);
-      }
-    });
-
-    socket?.on("call-answered", (data) => {
-      const { fromUserId, answer } = data;
-      peerConnection?.setRemoteDescription(new RTCSessionDescription(answer));
-    });
-
-    socket?.on("ice-candidate", (data) => {
-      const { fromUserId, candidate } = data;
-      console.log({ candidate }, "ice candidate");
-
-      addIceCandidate(new RTCIceCandidate(candidate));
-    });
-
-    return () => {
-      socket?.off("incoming-call");
-      socket?.off("call-answered");
-      socket?.off("ice-candidate");
-    };
-  }, [peerConnection]);
 
   return {
     localStream,

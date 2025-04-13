@@ -79,7 +79,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
   }
 
-  @SubscribeMessage('test')
+  @SubscribeMessage('webrtc-ice-candidate')
   handleIceCandidate(
     @ConnectedSocket() client: Socket,
     @MessageBody() data: any,
@@ -91,7 +91,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const targetSocketId = this.users.get(toUserId);
     if (!targetSocketId) return;
 
-    this.server.to(targetSocketId).emit('ice-candidate', {
+    this.server.to(targetSocketId).emit('webrtc-ice-candidate', {
       fromUserId,
       candidate,
     });

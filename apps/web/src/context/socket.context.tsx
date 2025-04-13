@@ -17,15 +17,35 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const { token } = useAuthStore();
 
   useEffect(() => {
+    if (!token) {
+      console.log("No token available, cannot connect socket");
+      return;
+    }
+
+    console.log("Connecting socket with token...");
     const socketInstance = io(process.env.NEXT_PUBLIC_API_URL, {
       auth: {
         token,
       },
+      autoConnect: true,
+    });
+
+    socketInstance.on("connect", () => {
+      console.log("Socket connected successfully!");
+    });
+
+    socketInstance.on("connect_error", (error) => {
+      console.error("Socket connection error:", error);
+    });
+
+    socketInstance.on("disconnect", (reason) => {
+      console.log("Socket disconnected:", reason);
     });
 
     setSocket(socketInstance);
 
     return () => {
+      console.log("Cleaning up socket connection");
       socketInstance.disconnect();
     };
   }, [token]);
