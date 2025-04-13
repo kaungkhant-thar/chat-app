@@ -9,6 +9,7 @@ const Page = () => {
   const trpc = useTRPC();
 
   const { data } = useQuery(trpc.profile.queryOptions());
+  console.log({ data });
 
   return (
     <Card className="max-w-lg mx-auto my-16 p-8">
