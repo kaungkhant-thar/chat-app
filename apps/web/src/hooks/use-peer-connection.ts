@@ -77,5 +77,6 @@ export const usePeerConnection = (
     setToUserId: (userId: string) => {
       toUserIdRef.current = userId;
     },
+    toUserId: toUserIdRef.current,
   };
 };

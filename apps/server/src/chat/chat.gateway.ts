@@ -64,6 +64,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('end-call')
   handleEndCall(@ConnectedSocket() client: Socket, @MessageBody() data: any) {
+    console.log('received end call event', data);
     const { toUserId } = data;
     const targetSocketId = this.users.get(toUserId);
 

@@ -7,6 +7,7 @@ export const useCallState = () => {
     isCallActive: false,
     isInitiator: false,
     signalingState: "stable",
+    type: "video",
   });
 
   const updateSignalingState = useCallback(

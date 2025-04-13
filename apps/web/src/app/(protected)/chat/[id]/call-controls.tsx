@@ -24,7 +24,7 @@ const CallControls = ({ userId }: CallControlsProps) => {
       ...prev,
       isCallActive: true,
     }));
-    startCall(userId);
+    startCall(userId, type);
   };
 
   const handleEndCall = () => {
@@ -77,8 +77,12 @@ const CallControls = ({ userId }: CallControlsProps) => {
           <VisuallyHidden>Calling</VisuallyHidden>
         </DialogTitle>
 
-        <DialogContent className="">
-          <Call userId={userId} isAudioOnly={false} onEndCall={handleEndCall} />
+        <DialogContent className="lg:max-w-4xl ">
+          <Call
+            userId={userId}
+            isAudioOnly={callState.type === "audio"}
+            onEndCall={handleEndCall}
+          />
         </DialogContent>
       </Dialog>
     </>

@@ -1,11 +1,18 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSocket } from "@web/context/socket.context";
 import { useMediaStream } from "./use-media-stream";
 import { usePeerConnection } from "./use-peer-connection";
 import { useCallState } from "./use-call-state";
 
+type IncomingCall = {
+  fromUserId: string;
+  offer: RTCSessionDescriptionInit;
+  type: "video" | "audio";
+} | null;
+
 export const useWebRTC = () => {
   const { socket } = useSocket();
+  const [incomingCall, setIncomingCall] = useState<IncomingCall>(null);
 
   const {
     localStream,
@@ -22,6 +29,7 @@ export const useWebRTC = () => {
     processPendingIceCandidates,
     cleanup: cleanupPeerConnection,
     setToUserId,
+    toUserId,
   } = usePeerConnection();
 
   const {
@@ -33,6 +41,7 @@ export const useWebRTC = () => {
     endCall,
     toggleMute: toggleCallMute,
   } = useCallState();
+  console.log([callState]);
 
   useEffect(() => {
     if (!socket) return;
@@ -47,14 +56,7 @@ export const useWebRTC = () => {
 
     socket.on("incoming-call", (data) => {
       console.log("received incoming call", data);
-      const { fromUserId, offer } = data;
-      if (
-        window.confirm(
-          `Incoming call from ${fromUserId}. Do you want to answer?`
-        )
-      ) {
-        handleAnswerCall(fromUserId, offer);
-      }
+      setIncomingCall(data);
     });
 
     socket.on("call-answered", (data) => {
@@ -85,7 +87,7 @@ export const useWebRTC = () => {
     };
   }, [socket?.connected, peerConnection]);
 
-  const handleStartCall = async (toUserId: string) => {
+  const handleStartCall = async (toUserId: string, type: "video" | "audio") => {
     const stream = await startStream();
     console.log("started calling", toUserId, stream);
     if (!stream) return;
@@ -106,11 +108,15 @@ export const useWebRTC = () => {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
+      setCallState((prev) => ({
+        ...prev,
+        type,
+      }));
       if (socket?.connected) {
         socket.emit("start-call", {
           toUserId,
           offer: pc.localDescription,
-          type: "video",
+          type,
         });
       }
     } catch (error) {
@@ -155,9 +161,23 @@ export const useWebRTC = () => {
     }
   };
 
+  const handleAcceptCall = () => {
+    if (!incomingCall) return;
+    handleAnswerCall(incomingCall.fromUserId, incomingCall.offer);
+    setCallState((prev) => ({
+      ...prev,
+      type: incomingCall.type,
+    }));
+    setIncomingCall(null);
+  };
+
+  const handleRejectCall = () => {
+    setIncomingCall(null);
+  };
+
   const handleEndCall = () => {
     if (callState.isCallActive) {
-      socket?.emit("end-call", { toUserId: setToUserId });
+      socket?.emit("end-call", { toUserId });
     }
     cleanup();
   };
@@ -182,5 +202,8 @@ export const useWebRTC = () => {
     toggleMute: handleToggleMute,
     callState,
     setCallState,
+    incomingCall,
+    handleAcceptCall,
+    handleRejectCall,
   };
 };
