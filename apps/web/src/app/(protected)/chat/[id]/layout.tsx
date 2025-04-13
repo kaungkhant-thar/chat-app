@@ -7,6 +7,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@web/components/ui/skeleton";
 import { useParams, useSearchParams } from "next/navigation";
 
+import { LogOut } from "lucide-react";
+import { Button } from "@web/components/ui/button";
+import { useAuthStore } from "@web/store/auth";
+
 type ChatLayoutProps = {
   children: React.ReactNode;
 };
@@ -17,8 +21,12 @@ const ChatLayout = ({ children }: ChatLayoutProps) => {
   const { data: users = [], isLoading } = useQuery(
     trpc.findOtherUsers.queryOptions()
   );
-
+  const { logout } = useAuthStore();
   const currentUser = users.find((user) => user.id === params.id);
+
+  const handleLogout = () => {
+    logout();
+  };
 
   return (
     <div className="h-screen flex flex-col">
@@ -35,6 +43,15 @@ const ChatLayout = ({ children }: ChatLayoutProps) => {
 
         <div className="flex items-center gap-2">
           <CallControls userId={params.id as string} />
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleLogout}
+            title="Logout"
+          >
+            <LogOut className="h-5 w-5" />
+          </Button>
         </div>
       </header>
 
