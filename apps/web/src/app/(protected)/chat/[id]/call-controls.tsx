@@ -5,7 +5,7 @@ import { Button } from "@web/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@web/components/ui/dialog";
 import { Phone, PhoneOff, Video, VideoOff } from "lucide-react";
 import Call from "@web/app/(protected)/chat/[id]/call";
-import { useWebRTC } from "@web/hooks/use-webrtc";
+import { useWebRTCContext } from "@web/context/webrtc.context";
 import { VisuallyHidden } from "@web/components/ui/visually-hidden";
 
 type CallControlsProps = {
@@ -14,11 +14,10 @@ type CallControlsProps = {
 
 const CallControls = ({ userId }: CallControlsProps) => {
   const [isCallModalOpen, setIsCallModalOpen] = React.useState(false);
-  console.log({ isCallModalOpen });
   const [callType, setCallType] = React.useState<"video" | "audio" | null>(
     null
   );
-  const { callState, startCall, endCall } = useWebRTC();
+  const { callState, startCall, endCall } = useWebRTCContext();
 
   const handleStartCall = (type: "video" | "audio") => {
     setCallType(type);
@@ -68,13 +67,13 @@ const CallControls = ({ userId }: CallControlsProps) => {
         </Button>
       )}
 
-      <Dialog open={isCallModalOpen} onOpenChange={setIsCallModalOpen}>
+      <Dialog open={isCallModalOpen} onOpenChange={handleEndCall}>
         <DialogTitle>
           <VisuallyHidden>Calling</VisuallyHidden>
         </DialogTitle>
 
-        <DialogContent className="max-w-4xl">
-          <Call userId={userId} isAudioOnly={false} />
+        <DialogContent className="">
+          <Call userId={userId} isAudioOnly={false} onEndCall={handleEndCall} />
         </DialogContent>
       </Dialog>
     </>

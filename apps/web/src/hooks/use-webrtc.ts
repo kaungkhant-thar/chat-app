@@ -16,7 +16,6 @@ export const useWebRTC = () => {
   const { socket } = useSocket();
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
-  console.log({ localStream, remoteStream });
 
   const [peerConnection, setPeerConnection] =
     useState<RTCPeerConnection | null>(null);
@@ -29,52 +28,55 @@ export const useWebRTC = () => {
   const toUserIdRef = useRef("");
   const pendingIceCandidatesRef = useRef<RTCIceCandidate[]>([]);
 
+  const initUserMedia = async () => {
+    try {
+      const stream = await window.navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
+
+      const pc = new RTCPeerConnection({
+        iceServers: [
+          {
+            urls: "stun:stun.l.google.com:19302",
+          },
+        ],
+      });
+
+      stream.getTracks().forEach((track) => {
+        pc.addTrack(track, stream);
+      });
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          socket?.emit("webrtc-ice-candidate", {
+            toUserId: toUserIdRef.current,
+            candidate: event.candidate,
+          });
+        }
+      };
+
+      pc.ontrack = (event) => {
+        const [remoteStream] = event.streams;
+        setRemoteStream(remoteStream);
+      };
+
+      pc.onsignalingstatechange = () => {
+        setCallState((prev) => ({
+          ...prev,
+          signalingState: pc.signalingState as CallState["signalingState"],
+        }));
+      };
+
+      setPeerConnection(pc);
+      setLocalStream(stream);
+    } catch (error) {
+      console.error("Error accessing media devices.", error);
+    }
+  };
+
   useEffect(() => {
     if (!socket?.connected) return;
-
-    window.navigator.mediaDevices
-      .getUserMedia({ video: true, audio: true })
-      .then((stream) => {
-        setLocalStream(stream);
-
-        const pc = new RTCPeerConnection({
-          iceServers: [
-            {
-              urls: "stun:stun.l.google.com:19302",
-            },
-          ],
-        });
-
-        stream.getTracks().forEach((track) => {
-          pc.addTrack(track, stream);
-        });
-
-        pc.onicecandidate = (event) => {
-          if (event.candidate) {
-            socket?.emit("webrtc-ice-candidate", {
-              toUserId: toUserIdRef.current,
-              candidate: event.candidate,
-            });
-          }
-        };
-
-        pc.ontrack = (event) => {
-          const [remoteStream] = event.streams;
-          setRemoteStream(remoteStream);
-        };
-
-        pc.onsignalingstatechange = () => {
-          setCallState((prev) => ({
-            ...prev,
-            signalingState: pc.signalingState as CallState["signalingState"],
-          }));
-        };
-
-        setPeerConnection(pc);
-      })
-      .catch((error) => {
-        console.error("Error accessing media devices.", error);
-      });
 
     return () => {
       cleanupCall();
@@ -162,29 +164,18 @@ export const useWebRTC = () => {
   const cleanupCall = () => {
     console.log("Cleaning up call resources");
 
-    // Clear remote stream first
     setRemoteStream(null);
 
-    // Close peer connection
     if (peerConnection) {
       peerConnection.close();
       setPeerConnection(null);
     }
 
-    // Stop local media tracks
-    if (localStream) {
-      localStream.getTracks().forEach((track) => {
-        try {
-          track.stop();
-          localStream.removeTrack(track);
-        } catch (error) {
-          console.error("Error stopping track:", error);
-        }
-      });
-      setLocalStream(null);
-    }
+    const tracks = localStream?.getTracks();
+    console.log({ tracks });
+    tracks?.forEach((track) => track.stop());
+    setLocalStream(null);
 
-    // Reset call state
     setCallState((prev) => ({
       ...prev,
       isCallActive: false,
@@ -208,7 +199,8 @@ export const useWebRTC = () => {
     toUserIdRef.current = "";
   };
 
-  const startCall = (toUserId: string) => {
+  const startCall = async (toUserId: string) => {
+    await initUserMedia();
     console.log("Starting call to", { toUserId, peerConnection, localStream });
     if (!peerConnection || !localStream) return;
     toUserIdRef.current = toUserId;

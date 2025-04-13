@@ -16,4 +16,13 @@ export class UsersService {
 
     return users;
   }
+
+  async findUserById(userId: string) {
+    const user = await this.prismaService.user.findFirst({
+      where: {
+        id: userId,
+      },
+    });
+    return user;
+  }
 }

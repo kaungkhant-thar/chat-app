@@ -18,11 +18,11 @@ type ChatLayoutProps = {
 const ChatLayout = ({ children }: ChatLayoutProps) => {
   const params = useParams();
   const trpc = useTRPC();
-  const { data: users = [], isLoading } = useQuery(
-    trpc.findOtherUsers.queryOptions()
+  const { data: user, isLoading } = useQuery(
+    trpc.findUserById.queryOptions({ id: params.id as string })
   );
+
   const { logout } = useAuthStore();
-  const currentUser = users.find((user) => user.id === params.id);
 
   const handleLogout = () => {
     logout();
@@ -36,7 +36,7 @@ const ChatLayout = ({ children }: ChatLayoutProps) => {
             <Skeleton className="h-6 w-32" />
           ) : (
             <h2 className="text-lg font-medium">
-              {currentUser?.name || currentUser?.email || "Chat"}
+              {user?.name || user?.email || "Chat"}
             </h2>
           )}
         </div>

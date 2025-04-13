@@ -1,16 +1,19 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@web/components/ui/button";
-import { useWebRTC } from "@web/hooks/use-webrtc";
+import { useWebRTCContext } from "@web/context/webrtc.context";
+import { useTRPC } from "@web/lib/trpc";
 import { Mic, MicOff, PhoneOff, User } from "lucide-react";
 import React, { useState } from "react";
 
 type CallProps = {
   userId: string;
   isAudioOnly?: boolean;
+  onEndCall: () => void;
 };
 
-const Call = ({ userId, isAudioOnly = false }: CallProps) => {
+const Call = ({ userId, isAudioOnly = false, onEndCall }: CallProps) => {
   const {
     localStream,
     remoteStream,
@@ -18,9 +21,12 @@ const Call = ({ userId, isAudioOnly = false }: CallProps) => {
     endCall,
     toggleMute,
     callState,
-  } = useWebRTC();
+  } = useWebRTCContext();
+  const trpc = useTRPC();
+  const { data: user, isLoading } = useQuery(
+    trpc.findUserById.queryOptions({ id: userId })
+  );
 
-  console.log({ localStream, remoteStream });
   if (isAudioOnly) {
     return (
       <div className="flex flex-col items-center gap-8 p-8">
@@ -110,7 +116,7 @@ const Call = ({ userId, isAudioOnly = false }: CallProps) => {
             </div>
           )}
           <div className="absolute bottom-2 left-2 bg-black/50 text-white px-2 py-1 rounded">
-            Remote
+            {user?.name}
           </div>
         </div>
       </div>
@@ -127,7 +133,7 @@ const Call = ({ userId, isAudioOnly = false }: CallProps) => {
             <Mic className="w-6 h-6" />
           )}
         </Button>
-        <Button onClick={endCall} variant="destructive" size="lg">
+        <Button onClick={onEndCall} variant="destructive" size="lg">
           <PhoneOff className="w-6 h-6" />
         </Button>
       </div>
