@@ -5,21 +5,28 @@ import { Input } from "@web/components/ui/input";
 import { useSocket } from "@web/context/socket.context";
 import { useTRPC } from "@web/lib/trpc";
 import { useParams } from "next/navigation";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ChatMessage } from "@shared/schemas";
-import Call from "./call";
 import { cn } from "@web/lib/utils";
 import { Send } from "lucide-react";
 import { ScrollArea } from "@web/components/ui/scroll-area";
 import { format, isSameDay, isToday, isYesterday } from "date-fns";
 
+type MessageStatus = "sending" | "sent" | "error";
+
+type OptimisticMessage = Omit<ChatMessage, "updatedAt"> & {
+  status: MessageStatus;
+  tempId: string;
+};
+
 type MessageProps = {
-  message: ChatMessage;
+  message: ChatMessage | OptimisticMessage;
   isOwnMessage: boolean;
   showAvatar: boolean;
   showTimestamp: boolean;
   isFirstInGroup: boolean;
   isLastInGroup: boolean;
+  onRetry?: () => void;
 };
 
 const Message = ({
@@ -28,7 +35,11 @@ const Message = ({
   showTimestamp,
   isFirstInGroup,
   isLastInGroup,
+  onRetry,
 }: MessageProps) => {
+  const isOptimistic = "status" in message;
+  const status = isOptimistic ? message.status : "sent";
+
   return (
     <div
       className={cn(
@@ -48,12 +59,29 @@ const Message = ({
           !isFirstInGroup && (isOwnMessage ? "rounded-tr-md" : "rounded-tl-md"),
           isLastInGroup &&
             (isOwnMessage ? "rounded-br-none" : "rounded-bl-none"),
-          !isLastInGroup && (isOwnMessage ? "rounded-br-md" : "rounded-bl-md")
+          !isLastInGroup && (isOwnMessage ? "rounded-br-md" : "rounded-bl-md"),
+          status === "sending" && "opacity-70",
+          status === "error" && "bg-destructive/20"
         )}
       >
-        {message.content}
+        <div className="flex items-center gap-2">
+          {message.content}
+          {status === "sending" && (
+            <span className="text-xs opacity-70">Sending...</span>
+          )}
+          {status === "error" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onRetry}
+              className="h-6 px-2 text-xs"
+            >
+              Retry
+            </Button>
+          )}
+        </div>
       </div>
-      {showTimestamp && (
+      {showTimestamp && status === "sent" && (
         <span className="text-[11px] text-muted-foreground px-1">
           {format(new Date(message.createdAt), "HH:mm")}
         </span>
@@ -81,6 +109,18 @@ const DateSeparator = ({ date }: { date: Date }) => {
   );
 };
 
+type ChatData = {
+  id: string;
+  messages: ChatMessage[];
+  updatedAt: string;
+  createdAt: string;
+};
+
+type SendMessageVariables = {
+  chatId: string;
+  content: string;
+};
+
 const Page = () => {
   const params = useParams<{ id: string }>();
   const userId = params.id;
@@ -98,7 +138,72 @@ const Page = () => {
   );
 
   const createChatMutation = useMutation(trpc.createChat.mutationOptions());
-  const sendMessageMutation = useMutation(trpc.sendMessage.mutationOptions());
+  const sendMessageMutation = useMutation({
+    ...trpc.sendMessage.mutationOptions(),
+    onMutate: async (newMessage: SendMessageVariables) => {
+      await queryClient.cancelQueries({
+        queryKey: trpc.getChat.queryKey({
+          userIds: [userId],
+        }),
+      });
+
+      const previousChat = queryClient.getQueryData<ChatData | null>(
+        trpc.getChat.queryKey({ userIds: [userId] })
+      );
+
+      // Optimistically update to the new value
+      queryClient.setQueryData<ChatData | null>(
+        trpc.getChat.queryKey({ userIds: [userId] }),
+        (old) => {
+          if (!old) return null;
+          return {
+            ...old,
+            messages: [
+              ...old.messages,
+              {
+                id: `temp-${Date.now()}`,
+                content: newMessage.content,
+                senderId: profile?.userId || "",
+                chatId: newMessage.chatId,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              },
+            ],
+          };
+        }
+      );
+
+      messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
+
+      queryClient.setQueryData(["previousChat"], previousChat);
+      return undefined;
+    },
+    onError: () => {
+      const previousChat = queryClient.getQueryData<ChatData | null>([
+        "previousChat",
+      ]);
+      if (previousChat) {
+        queryClient.setQueryData<ChatData | null>(
+          trpc.getChat.queryKey({ userIds: [userId] }),
+          previousChat
+        );
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.getChat.queryKey({ userIds: [userId] }),
+      });
+    },
+  });
+
+  const handleSendMessage = async (content: string) => {
+    if (!chat?.id) return;
+
+    await sendMessageMutation.mutateAsync({
+      chatId: chat.id,
+      content,
+    });
+  };
 
   useEffect(() => {
     if (!socket) return;
@@ -108,13 +213,38 @@ const Page = () => {
         trpc.getChat.queryKey({
           userIds: [userId],
         }),
-        (oldData) =>
-          oldData
-            ? {
-                ...oldData,
-                messages: [...oldData.messages, message],
-              }
-            : null
+        (oldData) => {
+          if (!oldData) return null;
+
+          const messageExists = oldData.messages.some(
+            (existingMsg) =>
+              existingMsg.id === message.id ||
+              (existingMsg.id.startsWith("temp-") &&
+                existingMsg.content === message.content &&
+                existingMsg.senderId === message.senderId)
+          );
+
+          if (messageExists) {
+            return {
+              ...oldData,
+              messages: oldData.messages.map((existingMsg) => {
+                if (
+                  existingMsg.id.startsWith("temp-") &&
+                  existingMsg.content === message.content &&
+                  existingMsg.senderId === message.senderId
+                ) {
+                  return message;
+                }
+                return existingMsg;
+              }),
+            };
+          }
+
+          return {
+            ...oldData,
+            messages: [...oldData.messages, message],
+          };
+        }
       );
       messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
@@ -127,7 +257,7 @@ const Page = () => {
   }, [socket]);
 
   useEffect(() => {
-    messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messageEndRef.current?.scrollIntoView({ behavior: "instant" });
   }, [chat?.messages]);
 
   if (!profile) return null;
@@ -193,10 +323,7 @@ const Page = () => {
               const input = inputRef.current;
               if (!input?.value.trim()) return;
 
-              sendMessageMutation.mutateAsync({
-                chatId: chat.id,
-                content: input.value,
-              });
+              handleSendMessage(input.value);
 
               input.value = "";
             }}

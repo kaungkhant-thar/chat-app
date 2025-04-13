@@ -55,7 +55,7 @@ const SignUpForm = () => {
   };
 
   return (
-    <section className="max-w-sm mx-auto min-h-screen my-20">
+    <section className="max-w-sm mx-auto min-h-screen py-20">
       <h3 className="text-3xl font-bold mb-2">Register a user</h3>
       <Link href="/login ">
         <p className="mb-8 underline">Already have account?</p>
