@@ -11,7 +11,7 @@ export const chatsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.userId;
       const { userIds } = input;
-      return ctx.chatsService.createChat([userId, ...userIds]);
+      return ctx.appContext.getChatsService().createChat([userId, ...userIds]);
     }),
 
   getChat: protectedProcedure
@@ -19,13 +19,15 @@ export const chatsRouter = router({
     .query(async ({ ctx, input }) => {
       const userId = ctx.user.userId;
       const { userIds } = input;
-      return ctx.chatsService.getChatByUsersIds([userId, ...userIds]);
+      return ctx.appContext
+        .getChatsService()
+        .getChatByUsersIds([userId, ...userIds]);
     }),
 
   sendMessage: protectedProcedure
     .input(SendMessageSchema)
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.userId;
-      return ctx.chatsService.sendMessage(input, userId);
+      return ctx.appContext.getChatsService().sendMessage(input, userId);
     }),
 });

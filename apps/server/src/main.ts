@@ -1,12 +1,9 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
 import { createExpressMiddleware } from '@trpc/server/adapters/express';
-import { appRouter } from './trpc/trpc.router';
+import { AppModule } from './app.module';
+import { AppContextService } from './trpc/appContext';
 import { createContext } from './trpc/trpc.context';
-import { PrismaService } from './prisma/prisma.service';
-import { AuthService } from './auth/auth.service';
-import { UsersService } from './users/users.service';
-import { ChatsService } from './chat/chat.service';
+import { appRouter } from './trpc/trpc.router';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -14,10 +11,7 @@ async function bootstrap() {
     origin: '*',
   });
 
-  const prisma = app.get(PrismaService);
-  const authService = app.get(AuthService);
-  const usersService = app.get(UsersService);
-  const chatsService = app.get(ChatsService);
+  const appContext = app.get(AppContextService);
 
   app.use(
     '/trpc',
@@ -26,10 +20,7 @@ async function bootstrap() {
       createContext: (opts) =>
         createContext({
           ...opts,
-          prisma,
-          authService,
-          usersService,
-          chatsService,
+          appContext,
         }),
     }),
   );
