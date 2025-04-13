@@ -5,7 +5,7 @@ export const usersRouter = router({
   findOtherUsers: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.user.userId;
 
-    return ctx.usersService.findOtherUsers(userId);
+    return ctx.appContext.getUsersService().findOtherUsers(userId);
   }),
 
   findUserById: protectedProcedure
@@ -13,7 +13,7 @@ export const usersRouter = router({
     .query(({ input, ctx }) => {
       const { id } = input;
 
-      const user = ctx.usersService.findUserById(id);
+      const user = ctx.appContext.getUsersService().findUserById(id);
 
       return user;
     }),

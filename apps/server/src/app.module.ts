@@ -7,6 +7,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ChatModule } from './chat/chat.module';
+import { TrpcModule } from './trpc/trpc.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { ChatModule } from './chat/chat.module';
     UsersModule,
     PrismaModule,
     ChatModule,
+    TrpcModule,
   ],
   controllers: [AppController],
   providers: [AppService],
