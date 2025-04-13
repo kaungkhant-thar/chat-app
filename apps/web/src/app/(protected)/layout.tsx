@@ -17,17 +17,19 @@ const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
 
   if (!hasHydrated) {
     return (
-      <div className="flex min-h-screen  justify-center items-center">
+      <div className="flex min-h-screen justify-center items-center">
         <Loader2 className="animate-spin" />
       </div>
     );
   }
 
   return (
-    <section className="grid grid-cols-[300px_1fr]">
-      <Sidebar />
-      {children}
-    </section>
+    <div className="min-h-screen flex flex-col">
+      <section className="flex-1 grid grid-cols-[300px_1fr]">
+        <Sidebar />
+        {children}
+      </section>
+    </div>
   );
 };
 

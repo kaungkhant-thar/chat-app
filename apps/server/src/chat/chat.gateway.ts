@@ -61,6 +61,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
   }
 
+  @SubscribeMessage('end-call')
+  handleEndCall(@ConnectedSocket() client: Socket, @MessageBody() data: any) {
+    const { toUserId } = data;
+    const targetSocketId = this.users.get(toUserId);
+
+    if (!targetSocketId) return;
+
+    this.server.to(targetSocketId).emit('end-call');
+  }
+
   @SubscribeMessage('answer-call')
   handleAnswerCall(
     @ConnectedSocket() client: Socket,
