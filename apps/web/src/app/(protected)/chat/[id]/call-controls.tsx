@@ -13,21 +13,26 @@ type CallControlsProps = {
 };
 
 const CallControls = ({ userId }: CallControlsProps) => {
-  const [isCallModalOpen, setIsCallModalOpen] = React.useState(false);
   const [callType, setCallType] = React.useState<"video" | "audio" | null>(
     null
   );
-  const { callState, startCall, endCall } = useWebRTCContext();
+  const { callState, startCall, endCall, setCallState } = useWebRTCContext();
 
   const handleStartCall = (type: "video" | "audio") => {
     setCallType(type);
-    setIsCallModalOpen(true);
+    setCallState((prev) => ({
+      ...prev,
+      isCallActive: true,
+    }));
     startCall(userId);
   };
 
   const handleEndCall = () => {
     endCall();
-    setIsCallModalOpen(false);
+    setCallState((prev) => ({
+      ...prev,
+      isCallActive: false,
+    }));
     setCallType(null);
   };
 
@@ -67,7 +72,7 @@ const CallControls = ({ userId }: CallControlsProps) => {
         </Button>
       )}
 
-      <Dialog open={isCallModalOpen} onOpenChange={handleEndCall}>
+      <Dialog open={callState.isCallActive} onOpenChange={handleEndCall}>
         <DialogTitle>
           <VisuallyHidden>Calling</VisuallyHidden>
         </DialogTitle>

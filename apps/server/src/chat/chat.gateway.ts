@@ -47,6 +47,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('start-call')
   handleStartCall(@ConnectedSocket() client: Socket, @MessageBody() data: any) {
+    console.log('received start call event', data);
     const fromUserId = client.data.userId;
     const { toUserId, offer, type } = data;
 
@@ -94,7 +95,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: any,
   ) {
-    console.log('receiving ice-candidate event', data);
+    // console.log('receiving ice-candidate event', data);
     const fromUserId = client.data.userId;
     const { candidate, toUserId } = data;
 
