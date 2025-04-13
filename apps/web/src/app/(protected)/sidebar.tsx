@@ -10,6 +10,9 @@ const Sidebar = () => {
 
   return (
     <aside className="border-r min-h-screen">
+      <div className="flex items-center justify-between p-4">
+        <h1 className="text-xl font-semibold">Chat App</h1>
+      </div>
       <ul className="space-y-3 p-4">
         {users.map((user) => (
           <li key={user.id} className="border-b  pb-2">
