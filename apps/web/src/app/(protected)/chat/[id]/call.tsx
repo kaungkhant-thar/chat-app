@@ -2,47 +2,102 @@
 
 import { Button } from "@web/components/ui/button";
 import { useWebRTC } from "@web/hooks/use-webrtc";
-import { PhoneCall } from "lucide-react";
+import { Mic, MicOff, PhoneCall, PhoneOff } from "lucide-react";
 import React from "react";
 
 const Call = ({ userId }: { userId: string }) => {
-  const { localStream, remoteStream, startCall } = useWebRTC();
+  const {
+    localStream,
+    remoteStream,
+    startCall,
+    toggleMute,
+    endCall,
+    callState,
+  } = useWebRTC();
 
   const handleCall = () => {
     startCall(userId);
   };
+
+  if (!callState.isCallActive) {
+    return (
+      <div className="flex items-center justify-center p-4">
+        <Button
+          onClick={handleCall}
+          className="bg-green-500 hover:bg-green-600 text-white"
+          size="lg"
+        >
+          <PhoneCall className="w-6 h-6 mr-2" />
+          Start Call
+        </Button>
+      </div>
+    );
+  }
+
   return (
-    <div>
-      <Button onClick={handleCall}>
-        <PhoneCall />
-      </Button>
+    <div className="flex flex-col items-center gap-4 p-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-4xl">
+        <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
+          {localStream && (
+            <video
+              autoPlay
+              playsInline
+              muted
+              ref={(video) => {
+                if (video) {
+                  video.srcObject = localStream;
+                }
+              }}
+              className="w-full h-full object-cover"
+            />
+          )}
+          <div className="absolute bottom-2 left-2 bg-black/50 text-white px-2 py-1 rounded">
+            You
+          </div>
+        </div>
 
-      <div className="flex gap-3">
-        {localStream && (
-          <video
-            autoPlay
-            playsInline
-            ref={(video) => {
-              if (video) {
-                video.srcObject = localStream;
-              }
-            }}
-            style={{ width: "300px", height: "300px" }}
-          />
-        )}
+        <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
+          {remoteStream ? (
+            <video
+              autoPlay
+              playsInline
+              ref={(video) => {
+                if (video) {
+                  video.srcObject = remoteStream;
+                }
+              }}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gray-800">
+              <span className="text-white">
+                {!callState.isCallActive
+                  ? "Call ended"
+                  : "Waiting for connection..."}
+              </span>
+            </div>
+          )}
+          <div className="absolute bottom-2 left-2 bg-black/50 text-white px-2 py-1 rounded">
+            Remote
+          </div>
+        </div>
+      </div>
 
-        {remoteStream && (
-          <video
-            autoPlay
-            playsInline
-            ref={(video) => {
-              if (video) {
-                video.srcObject = remoteStream;
-              }
-            }}
-            style={{ width: "300px", height: "300px" }}
-          />
-        )}
+      <div className="flex gap-4">
+        <Button
+          onClick={toggleMute}
+          variant={callState.isMuted ? "destructive" : "default"}
+          size="lg"
+        >
+          {callState.isMuted ? (
+            <MicOff className="w-6 h-6" />
+          ) : (
+            <Mic className="w-6 h-6" />
+          )}
+        </Button>
+        <Button onClick={endCall} variant="destructive" size="lg">
+          <PhoneOff className="w-6 h-6" />
+        </Button>
       </div>
     </div>
   );
