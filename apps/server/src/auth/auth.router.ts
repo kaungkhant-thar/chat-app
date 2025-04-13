@@ -4,12 +4,12 @@ import { signupSchema, loginSchema } from '@shared/schemas';
 
 export const authRouter = router({
   signup: procedure.input(signupSchema).mutation(async ({ input, ctx }) => {
-    return ctx.authService.signup(input);
+    return ctx.appContext.getAuthService().signup(input);
   }),
 
   login: procedure.input(loginSchema).mutation(async ({ input, ctx }) => {
     const { email, password } = input;
-    return ctx.authService.login(email, password);
+    return ctx.appContext.getAuthService().login(email, password);
   }),
 
   profile: protectedProcedure.query(({ ctx }) => {

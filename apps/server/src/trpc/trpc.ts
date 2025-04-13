@@ -18,7 +18,7 @@ export const protectedProcedure = procedure.use(async (opts) => {
   }
   const tokenValue = token.split(' ')[1];
 
-  const user = await ctx.authService.verifyToken(tokenValue);
+  const user = await ctx.appContext.getAuthService().verifyToken(tokenValue);
 
   if (!user) {
     throw new Error('Unauthorized');
