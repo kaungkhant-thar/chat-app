@@ -23,6 +23,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private users = new Map<string, string>();
 
+  getSocketId(userId: string): string | undefined {
+    return this.users.get(userId);
+  }
+
   async handleConnection(@ConnectedSocket() client: Socket) {
     const token = client.handshake.auth.token as string;
 
