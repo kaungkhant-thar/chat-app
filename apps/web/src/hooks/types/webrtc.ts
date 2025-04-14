@@ -17,4 +17,8 @@ export type MediaStreamConfig = {
 
 export type PeerConnectionConfig = {
   iceServers: RTCIceServer[];
+  iceCandidatePoolSize?: number;
+  iceTransportPolicy?: "all" | "relay";
+  bundlePolicy?: "balanced" | "max-compat" | "max-bundle";
+  rtcpMuxPolicy?: "require";
 };
