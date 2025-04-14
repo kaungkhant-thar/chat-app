@@ -4,16 +4,11 @@ import { PeerConnectionConfig } from "./types/webrtc";
 
 const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun.l.google.com:19302" },
-  { urls: "stun:stun1.l.google.com:19302" },
-  { urls: "stun:stun2.l.google.com:19302" },
-  { urls: "stun:stun3.l.google.com:19302" },
-  { urls: "stun:stun4.l.google.com:19302" },
-  // Add your TURN server configuration here if you have one
-  // {
-  //   urls: "turn:your-turn-server.com:3478",
-  //   username: "username",
-  //   credential: "credential"
-  // }
+  {
+    urls: "turn:openrelay.metered.ca:80",
+    username: "openrelayproject",
+    credential: "openrelayproject",
+  },
 ];
 
 export const usePeerConnection = (
