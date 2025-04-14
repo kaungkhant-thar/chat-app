@@ -52,6 +52,17 @@ export class ChatsService {
       },
     });
 
-    this.chatGateway.server.emit('message', message);
+    const chatUsers = await this.prismaService.chatUser.findMany({
+      where: { chatId },
+      select: { userId: true },
+    });
+    console.log({ chatUsers });
+
+    chatUsers.forEach(({ userId }) => {
+      const socketId = this.chatGateway.getSocketId(userId);
+      if (socketId) {
+        this.chatGateway.server.to(socketId).emit('message', message);
+      }
+    });
   }
 }

@@ -20,6 +20,7 @@ const ChatLayout = ({ children }: ChatLayoutProps) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const params = useParams();
   const trpc = useTRPC();
+  const { data: profile } = useQuery(trpc.profile.queryOptions());
   const { data: user, isLoading } = useQuery(
     trpc.findUserById.queryOptions({ id: params.id as string })
   );
@@ -60,6 +61,8 @@ const ChatLayout = ({ children }: ChatLayoutProps) => {
         <div className="flex flex-col h-full">
           <div className="p-4 border-b flex-shrink-0">
             <h1 className="text-xl font-semibold">Chat App</h1>
+
+            <p>Logged in as {profile?.email}</p>
           </div>
           <nav className="flex-1 overflow-y-auto">
             <ul className="p-4 space-y-2">
