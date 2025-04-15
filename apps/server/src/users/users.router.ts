@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 export const usersRouter = router({
   findOtherUsers: protectedProcedure.query(async ({ ctx }) => {
-    const userId = ctx.user.userId;
+    const userId = ctx.user.id;
 
     return ctx.appContext.getUsersService().findOtherUsers(userId);
   }),

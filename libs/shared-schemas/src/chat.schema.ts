@@ -23,6 +23,10 @@ export const ChatMessageSchema = z.object({
   id: z.string().uuid(),
   content: z.string(),
   senderId: z.string().uuid(),
+  sender: z.object({
+    id: z.string().uuid(),
+    name: z.string(),
+  }),
   chatId: z.string().uuid(),
   createdAt: z.string(),
   updatedAt: z.string(),
