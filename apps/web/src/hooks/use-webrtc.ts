@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSocket } from "@web/context/socket.context";
 import { useMediaStream } from "./use-media-stream";
 import { usePeerConnection } from "./use-peer-connection";
@@ -13,12 +13,14 @@ type IncomingCall = {
 export const useWebRTC = () => {
   const { socket } = useSocket();
   const [incomingCall, setIncomingCall] = useState<IncomingCall>(null);
+  const [error, setError] = useState<Error | null>(null);
 
   const {
     localStream,
     startStream,
     stopStream,
     toggleMute: toggleMediaMute,
+    error: mediaError,
   } = useMediaStream();
 
   const {
@@ -30,6 +32,10 @@ export const useWebRTC = () => {
     cleanup: cleanupPeerConnection,
     setToUserId,
     toUserId,
+    connectionState,
+    iceConnectionState,
+    signalingState,
+    error: peerError,
   } = usePeerConnection();
 
   const {
@@ -41,108 +47,150 @@ export const useWebRTC = () => {
     endCall,
     toggleMute: toggleCallMute,
   } = useCallState();
-  console.log([callState]);
 
+  const cleanup = useCallback(() => {
+    console.log("Cleaning up WebRTC resources");
+    stopStream();
+    cleanupPeerConnection();
+    endCall();
+    setError(null);
+  }, [stopStream, cleanupPeerConnection, endCall]);
+
+  // Handle errors from different sources
+  useEffect(() => {
+    if (mediaError) setError(mediaError);
+    else if (peerError) setError(peerError);
+    else setError(null);
+  }, [mediaError, peerError]);
+
+  // Handle connection state changes
+  useEffect(() => {
+    if (connectionState === "failed" || iceConnectionState === "failed") {
+      setError(new Error("Connection failed"));
+    }
+  }, [connectionState, iceConnectionState]);
+
+  // Setup socket event handlers
   useEffect(() => {
     if (!socket) return;
 
-    const handleIceCandidate = (data: { candidate: RTCIceCandidateInit }) => {
-      const { candidate } = data;
-      if (!candidate) return;
-
-      const iceCandidate = new RTCIceCandidate(candidate);
-      addIceCandidate(iceCandidate);
+    const handleIceCandidate = ({
+      candidate,
+    }: {
+      candidate: RTCIceCandidateInit;
+    }) => {
+      if (candidate) addIceCandidate(new RTCIceCandidate(candidate));
     };
 
     const handleIncomingCall = (data: IncomingCall) => {
-      console.log("received incoming call", data);
+      console.log("Received incoming call", { data });
       setIncomingCall(data);
     };
 
-    const handleCallAnswered = (data: {
+    const handleCallAnswered = async ({
+      answer,
+    }: {
       answer: RTCSessionDescriptionInit;
     }) => {
-      const { answer } = data;
-      console.log("received call answer", {
-        answer,
-        peerConnection,
-        signalingState: peerConnection?.signalingState,
-        connectionState: peerConnection?.connectionState,
-      });
-
       if (!peerConnection) {
-        console.error("No peer connection available when receiving answer");
+        setError(new Error("No peer connection available"));
         return;
       }
 
-      peerConnection
-        .setRemoteDescription(new RTCSessionDescription(answer))
-        .then(() => {
-          processPendingIceCandidates();
-        })
-        .catch((error) => {
-          console.error("Error setting remote description:", error);
-          cleanup();
-        });
-    };
-
-    const handleEndCall = () => {
-      console.log("Received end-call event, cleaning up");
-      cleanup();
+      try {
+        await peerConnection.setRemoteDescription(
+          new RTCSessionDescription(answer)
+        );
+        await processPendingIceCandidates();
+      } catch (error) {
+        console.error("Error setting remote description:", error);
+        setError(error as Error);
+        cleanup();
+      }
     };
 
     socket.on("webrtc-ice-candidate", handleIceCandidate);
     socket.on("incoming-call", handleIncomingCall);
     socket.on("call-answered", handleCallAnswered);
-    socket.on("end-call", handleEndCall);
+    socket.on("end-call", cleanup);
 
     return () => {
       socket.off("webrtc-ice-candidate", handleIceCandidate);
       socket.off("incoming-call", handleIncomingCall);
       socket.off("call-answered", handleCallAnswered);
-      socket.off("end-call", handleEndCall);
+      socket.off("end-call", cleanup);
     };
-  }, [socket?.connected]);
+  }, [
+    socket?.connected,
+    peerConnection,
+    addIceCandidate,
+    processPendingIceCandidates,
+    cleanup,
+  ]);
 
-  const handleStartCall = async (toUserId: string, type: "video" | "audio") => {
-    console.log("Starting call with", { toUserId, type });
-    const stream = await startStream();
-    console.log("Stream started:", !!stream);
-    if (!stream) return;
-
-    const pc = createPeerConnection();
-    console.log("Created peer connection:", !!pc);
-    setToUserId(toUserId);
-    startCall();
+  // Helper function to setup tracks
+  const setupTracks = (pc: RTCPeerConnection, stream: MediaStream) => {
+    const senders: RTCRtpSender[] = [];
 
     stream.getTracks().forEach((track) => {
-      pc.addTrack(track, stream);
+      console.log("Adding track:", { kind: track.kind, id: track.id });
+      const sender = pc.addTrack(track, stream);
+      senders.push(sender);
+
+      track.onended = () => {
+        console.log("Track ended:", track.id);
+        try {
+          pc.removeTrack(sender);
+        } catch (error) {
+          console.error("Error removing track:", error);
+        }
+        cleanup();
+      };
     });
 
-    pc.onsignalingstatechange = () => {
-      console.log("Signaling state changed:", pc.signalingState);
-      updateSignalingState(pc.signalingState as any);
-    };
+    return senders;
+  };
 
+  // Helper function to emit socket event
+  const emitSocketEvent = (event: string, data: any) => {
+    if (!socket?.connected) {
+      throw new Error("Socket not connected");
+    }
+    socket.emit(event, data);
+  };
+
+  const handleStartCall = async (toUserId: string, type: "video" | "audio") => {
     try {
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      console.log("Created and set local offer");
+      const stream = await startStream();
+      if (!stream) throw new Error("Failed to start media stream");
 
-      setCallState((prev) => ({
-        ...prev,
+      const pc = createPeerConnection();
+      if (!pc) throw new Error("Failed to create peer connection");
+
+      setToUserId(toUserId);
+      startCall();
+
+      setupTracks(pc, stream);
+
+      pc.onsignalingstatechange = () => {
+        updateSignalingState(pc.signalingState as any);
+      };
+
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: type === "video",
+      });
+      await pc.setLocalDescription(offer);
+
+      setCallState((prev) => ({ ...prev, type }));
+      emitSocketEvent("start-call", {
+        toUserId,
+        offer: pc.localDescription,
         type,
-      }));
-      if (socket?.connected) {
-        socket.emit("start-call", {
-          toUserId,
-          offer: pc.localDescription,
-          type,
-        });
-        console.log("Emitted start-call event");
-      }
+      });
     } catch (error) {
-      console.error("Error creating offer:", error);
+      console.error("Error starting call:", error);
+      setError(error as Error);
       cleanup();
     }
   };
@@ -151,51 +199,80 @@ export const useWebRTC = () => {
     toUserId: string,
     offer: RTCSessionDescriptionInit
   ) => {
-    const stream = await startStream();
-    if (!stream) return;
-
-    const pc = createPeerConnection();
-    setToUserId(toUserId);
-    answerCall();
-
-    stream.getTracks().forEach((track) => {
-      pc.addTrack(track, stream);
-    });
-
-    pc.onsignalingstatechange = () => {
-      updateSignalingState(pc.signalingState as any);
-    };
-
     try {
+      const stream = await startStream();
+      if (!stream) throw new Error("Failed to start media stream");
+
+      const pc = createPeerConnection();
+      if (!pc) throw new Error("Failed to create peer connection");
+
+      setToUserId(toUserId);
+      answerCall();
+
+      setupTracks(pc, stream);
+
+      pc.onsignalingstatechange = () => {
+        updateSignalingState(pc.signalingState as any);
+      };
+
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
-      if (socket?.connected) {
-        socket.emit("answer-call", {
-          toUserId,
-          answer: pc.localDescription,
-        });
-      }
+      emitSocketEvent("answer-call", {
+        toUserId,
+        answer: pc.localDescription,
+      });
     } catch (error) {
       console.error("Error answering call:", error);
+      setError(error as Error);
       cleanup();
     }
   };
 
-  const handleAcceptCall = () => {
+  const handleAcceptCall = async () => {
     if (!incomingCall) return;
-    handleAnswerCall(incomingCall.fromUserId, incomingCall.offer);
-    setCallState((prev) => ({
-      ...prev,
-      type: incomingCall.type,
-    }));
-    setIncomingCall(null);
+
+    try {
+      const stream = await startStream();
+      if (!stream) throw new Error("Failed to start media stream");
+
+      const pc = createPeerConnection();
+      if (!pc) {
+        stopStream();
+        throw new Error("Failed to create peer connection");
+      }
+
+      setToUserId(incomingCall.fromUserId);
+      answerCall();
+
+      setupTracks(pc, stream);
+
+      pc.onsignalingstatechange = () => {
+        updateSignalingState(pc.signalingState as any);
+      };
+
+      await pc.setRemoteDescription(
+        new RTCSessionDescription(incomingCall.offer)
+      );
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+
+      emitSocketEvent("answer-call", {
+        toUserId: incomingCall.fromUserId,
+        answer: pc.localDescription,
+      });
+
+      setCallState((prev) => ({ ...prev, type: incomingCall.type }));
+      setIncomingCall(null);
+    } catch (error) {
+      console.error("Error accepting call:", error);
+      setError(error as Error);
+      cleanup();
+    }
   };
 
-  const handleRejectCall = () => {
-    setIncomingCall(null);
-  };
+  const handleRejectCall = () => setIncomingCall(null);
 
   const handleEndCall = () => {
     if (callState.isCallActive) {
@@ -207,13 +284,6 @@ export const useWebRTC = () => {
   const handleToggleMute = () => {
     toggleMediaMute();
     toggleCallMute();
-  };
-
-  const cleanup = () => {
-    console.log("Cleaning up WebRTC resources");
-    stopStream();
-    cleanupPeerConnection();
-    endCall();
   };
 
   return {
@@ -228,5 +298,9 @@ export const useWebRTC = () => {
     incomingCall,
     handleAcceptCall,
     handleRejectCall,
+    error,
+    connectionState,
+    iceConnectionState,
+    signalingState,
   };
 };
