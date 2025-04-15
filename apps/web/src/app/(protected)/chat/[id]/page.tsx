@@ -172,7 +172,7 @@ const Page = () => {
             messages={chat.messages}
             currentUserId={profile.userId}
           />
-          <UserIsTyping userId={userId} />
+          <UserIsTyping userId={userId} chatId={chat.id} />
           <ChatInput
             onSendMessage={handleSendMessage}
             isLoading={sendMessageMutation.isPending}

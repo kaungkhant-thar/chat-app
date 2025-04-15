@@ -3,7 +3,18 @@ import { useSocket } from "@web/context/socket.context";
 import { useTRPC } from "@web/lib/trpc";
 import React, { useEffect, useState } from "react";
 
-const UserIsTyping = ({ userId }: { userId: string }) => {
+type TypingEvent = {
+  fromUserId: string;
+  chatId: string;
+};
+
+const UserIsTyping = ({
+  userId,
+  chatId,
+}: {
+  userId: string;
+  chatId: string;
+}) => {
   const { socket } = useSocket();
   const trpc = useTRPC();
   const [isTyping, setIsTyping] = useState(false);
@@ -17,8 +28,17 @@ const UserIsTyping = ({ userId }: { userId: string }) => {
   useEffect(() => {
     if (!socket) return;
 
-    const handleTyping = () => setIsTyping(true);
-    const handleStopTyping = () => setIsTyping(false);
+    const handleTyping = (event: TypingEvent) => {
+      if (event.chatId === chatId && event.fromUserId === userId) {
+        setIsTyping(true);
+      }
+    };
+
+    const handleStopTyping = (event: TypingEvent) => {
+      if (event.chatId === chatId && event.fromUserId === userId) {
+        setIsTyping(false);
+      }
+    };
 
     socket.on("typing", handleTyping);
     socket.on("stop-typing", handleStopTyping);
@@ -27,7 +47,7 @@ const UserIsTyping = ({ userId }: { userId: string }) => {
       socket.off("typing", handleTyping);
       socket.off("stop-typing", handleStopTyping);
     };
-  }, [socket]);
+  }, [socket, chatId, userId]);
 
   if (!data || !isTyping) return null;
 
