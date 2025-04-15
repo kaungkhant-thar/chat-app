@@ -46,46 +46,72 @@ export const useWebRTC = () => {
   useEffect(() => {
     if (!socket) return;
 
-    socket.on("webrtc-ice-candidate", (data) => {
+    const handleIceCandidate = (data: { candidate: RTCIceCandidateInit }) => {
       const { candidate } = data;
       if (!candidate) return;
 
       const iceCandidate = new RTCIceCandidate(candidate);
       addIceCandidate(iceCandidate);
-    });
+    };
 
-    socket.on("incoming-call", (data) => {
+    const handleIncomingCall = (data: IncomingCall) => {
       console.log("received incoming call", data);
       setIncomingCall(data);
-    });
+    };
 
-    socket.on("call-answered", (data) => {
+    const handleCallAnswered = (data: {
+      answer: RTCSessionDescriptionInit;
+    }) => {
       const { answer } = data;
-      console.log("received call answer", { answer, peerConnection });
+      console.log("received call answer", {
+        answer,
+        peerConnection,
+        signalingState: peerConnection?.signalingState,
+        connectionState: peerConnection?.connectionState,
+      });
+
+      if (!peerConnection) {
+        console.error("No peer connection available when receiving answer");
+        return;
+      }
+
       peerConnection
-        ?.setRemoteDescription(new RTCSessionDescription(answer))
+        .setRemoteDescription(new RTCSessionDescription(answer))
         .then(() => {
           processPendingIceCandidates();
         })
-        .catch(console.error);
-    });
+        .catch((error) => {
+          console.error("Error setting remote description:", error);
+          cleanup();
+        });
+    };
 
-    socket.on("end-call", cleanup);
+    const handleEndCall = () => {
+      console.log("Received end-call event, cleaning up");
+      cleanup();
+    };
+
+    socket.on("webrtc-ice-candidate", handleIceCandidate);
+    socket.on("incoming-call", handleIncomingCall);
+    socket.on("call-answered", handleCallAnswered);
+    socket.on("end-call", handleEndCall);
 
     return () => {
-      socket.off("webrtc-ice-candidate");
-      socket.off("incoming-call");
-      socket.off("call-answered");
-      socket.off("end-call");
+      socket.off("webrtc-ice-candidate", handleIceCandidate);
+      socket.off("incoming-call", handleIncomingCall);
+      socket.off("call-answered", handleCallAnswered);
+      socket.off("end-call", handleEndCall);
     };
-  }, [socket?.connected, peerConnection]);
+  }, [socket?.connected]);
 
   const handleStartCall = async (toUserId: string, type: "video" | "audio") => {
+    console.log("Starting call with", { toUserId, type });
     const stream = await startStream();
-    console.log("started calling", toUserId, stream);
+    console.log("Stream started:", !!stream);
     if (!stream) return;
 
     const pc = createPeerConnection();
+    console.log("Created peer connection:", !!pc);
     setToUserId(toUserId);
     startCall();
 
@@ -94,12 +120,14 @@ export const useWebRTC = () => {
     });
 
     pc.onsignalingstatechange = () => {
+      console.log("Signaling state changed:", pc.signalingState);
       updateSignalingState(pc.signalingState as any);
     };
 
     try {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
+      console.log("Created and set local offer");
 
       setCallState((prev) => ({
         ...prev,
@@ -111,6 +139,7 @@ export const useWebRTC = () => {
           offer: pc.localDescription,
           type,
         });
+        console.log("Emitted start-call event");
       }
     } catch (error) {
       console.error("Error creating offer:", error);
@@ -181,6 +210,7 @@ export const useWebRTC = () => {
   };
 
   const cleanup = () => {
+    console.log("Cleaning up WebRTC resources");
     stopStream();
     cleanupPeerConnection();
     endCall();
