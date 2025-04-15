@@ -22,7 +22,16 @@ export class ChatsService {
         },
       },
       include: {
-        messages: true,
+        messages: {
+          include: {
+            sender: {
+              select: {
+                name: true,
+                id: true,
+              },
+            },
+          },
+        },
       },
     });
     return chat;

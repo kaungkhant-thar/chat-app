@@ -2,6 +2,7 @@
 
 import { cn } from "@web/lib/utils";
 import { type ChatMessage as ChatMessageType } from "./types";
+import { Avatar, AvatarFallback } from "@web/components/ui/avatar";
 
 const getBorderRadiusClass = (
   isCurrentUser: boolean,
@@ -39,6 +40,7 @@ const ChatMessage = ({
   showAvatar,
   messagePosition = "single",
   createdAt,
+  sender,
 }: ChatMessageType) => {
   const showTime = shouldShowTime(messagePosition);
 
@@ -50,12 +52,16 @@ const ChatMessage = ({
       )}
     >
       {showAvatar && (
-        <div
-          className={cn(
-            "h-8 w-8 rounded-full",
-            isCurrentUser ? "bg-blue-500" : "bg-gray-500"
-          )}
-        />
+        <Avatar className={cn("h-8 w-8 rounded-full")}>
+          <AvatarFallback
+            className={cn(
+              "text-white",
+              isCurrentUser ? " bg-blue-500" : "bg-gray-500"
+            )}
+          >
+            {sender.name.charAt(0).toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
       )}
       {!showAvatar && <div className="w-8" />}
       <div

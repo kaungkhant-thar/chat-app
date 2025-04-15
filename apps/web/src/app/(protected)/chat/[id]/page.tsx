@@ -5,30 +5,11 @@ import { Button } from "@web/components/ui/button";
 import { useSocket } from "@web/context/socket.context";
 import { useTRPC } from "@web/lib/trpc";
 import { ChatType } from "@web/lib/trpc.types";
-import { cn } from "@web/lib/utils";
-import { format, isToday, isYesterday } from "date-fns";
 import { useParams } from "next/navigation";
 import { useEffect } from "react";
 import { ChatInput } from "../components/ChatInput";
 import { MessageList } from "../components/MessageList";
 import UserIsTyping from "../components/UserIsTyping";
-
-type MessageStatus = "sending" | "sent" | "error";
-
-type OptimisticMessage = Omit<ChatMessage, "updatedAt"> & {
-  status: MessageStatus;
-  tempId: string;
-};
-
-type MessageProps = {
-  message: ChatMessage | OptimisticMessage;
-  isOwnMessage: boolean;
-  showAvatar: boolean;
-  showTimestamp: boolean;
-  isFirstInGroup: boolean;
-  isLastInGroup: boolean;
-  onRetry?: () => void;
-};
 
 type SendMessageVariables = {
   chatId: string;
@@ -75,7 +56,11 @@ const Page = () => {
               {
                 id: `temp-${Date.now()}`,
                 content: newMessage.content,
-                senderId: profile?.userId || "",
+                senderId: profile?.id || "",
+                sender: {
+                  id: profile?.id || "",
+                  name: profile?.name || "",
+                },
                 chatId: newMessage.chatId,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
@@ -123,6 +108,14 @@ const Page = () => {
         (oldData) => {
           if (!oldData) return null;
 
+          const messageWithSender = {
+            ...message,
+            sender: {
+              id: message.senderId,
+              name: message.sender.name,
+            },
+          };
+
           const messageExists = oldData.messages.some(
             (existingMsg) =>
               existingMsg.id === message.id ||
@@ -134,22 +127,19 @@ const Page = () => {
           if (messageExists) {
             return {
               ...oldData,
-              messages: oldData.messages.map((existingMsg) => {
-                if (
-                  existingMsg.id.startsWith("temp-") &&
-                  existingMsg.content === message.content &&
-                  existingMsg.senderId === message.senderId
-                ) {
-                  return message;
-                }
-                return existingMsg;
-              }),
+              messages: oldData.messages.map((existingMsg) =>
+                existingMsg.id.startsWith("temp-") &&
+                existingMsg.content === message.content &&
+                existingMsg.senderId === message.senderId
+                  ? messageWithSender
+                  : existingMsg
+              ),
             };
           }
 
           return {
             ...oldData,
-            messages: [...oldData.messages, message],
+            messages: [...oldData.messages, messageWithSender],
           };
         }
       );
@@ -168,10 +158,7 @@ const Page = () => {
     <div className="flex flex-col h-full">
       {chat ? (
         <>
-          <MessageList
-            messages={chat.messages}
-            currentUserId={profile.userId}
-          />
+          <MessageList messages={chat.messages} currentUserId={profile.id} />
           <UserIsTyping userId={userId} chatId={chat.id} />
           <ChatInput
             onSendMessage={handleSendMessage}
