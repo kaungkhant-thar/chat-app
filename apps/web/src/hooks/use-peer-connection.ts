@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useSocket } from "@web/context/socket.context";
 import { PeerConnectionConfig } from "./types/webrtc";
 
@@ -6,15 +6,8 @@ const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun.l.google.com:19302" },
   { urls: "stun:stun1.l.google.com:19302" },
   { urls: "stun:stun2.l.google.com:19302" },
-  { urls: "stun:stun3.l.google.com:19302" },
-  { urls: "stun:stun4.l.google.com:19302" },
   {
     urls: "turn:openrelay.metered.ca:80",
-    username: "openrelayproject",
-    credential: "openrelayproject",
-  },
-  {
-    urls: "turn:openrelay.metered.ca:80?transport=tcp",
     username: "openrelayproject",
     credential: "openrelayproject",
   },
@@ -23,12 +16,9 @@ const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
     username: "openrelayproject",
     credential: "openrelayproject",
   },
-  {
-    urls: "turn:openrelay.metered.ca:443?transport=tcp",
-    username: "openrelayproject",
-    credential: "openrelayproject",
-  },
 ];
+
+const MAX_RECONNECT_ATTEMPTS = 3;
 
 export const usePeerConnection = (
   config: PeerConnectionConfig = {
@@ -40,6 +30,8 @@ export const usePeerConnection = (
   }
 ) => {
   const { socket } = useSocket();
+
+  // State management
   const [peerConnection, setPeerConnection] =
     useState<RTCPeerConnection | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
@@ -47,115 +39,164 @@ export const usePeerConnection = (
     useState<RTCPeerConnectionState>("new");
   const [iceConnectionState, setIceConnectionState] =
     useState<RTCIceConnectionState>("new");
+  const [signalingState, setSignalingState] =
+    useState<RTCSignalingState>("stable");
+  const [error, setError] = useState<Error | null>(null);
+
+  // Refs for managing connection
   const pendingIceCandidatesRef = useRef<RTCIceCandidate[]>([]);
   const toUserIdRef = useRef("");
   const reconnectAttemptsRef = useRef(0);
-  const MAX_RECONNECT_ATTEMPTS = 3;
 
-  const createPeerConnection = useCallback(() => {
-    console.log("Creating new peer connection");
-    const pc = new RTCPeerConnection(config);
+  const cleanup = useCallback(() => {
+    if (!peerConnection) return;
 
-    pc.onicecandidate = (event) => {
-      if (event.candidate && socket?.connected) {
-        console.log("Sending ICE candidate:", event.candidate);
-        socket.emit("webrtc-ice-candidate", {
-          toUserId: toUserIdRef.current,
-          candidate: event.candidate,
-        });
-      }
-    };
+    try {
+      peerConnection.close();
+      setPeerConnection(null);
+      setRemoteStream(null);
+      pendingIceCandidatesRef.current = [];
+      toUserIdRef.current = "";
+      reconnectAttemptsRef.current = 0;
+      setError(null);
+    } catch (error) {
+      console.error("Error closing peer connection:", error);
+      setError(error as Error);
+    }
+  }, [peerConnection]);
 
-    pc.onicegatheringstatechange = () => {
-      console.log("ICE gathering state:", pc.iceGatheringState);
-      if (pc.iceGatheringState === "complete") {
-        console.log("ICE gathering completed");
-      }
-    };
+  const handleConnectionStateChange = useCallback(
+    (pc: RTCPeerConnection) => {
+      setConnectionState(pc.connectionState);
 
-    pc.oniceconnectionstatechange = () => {
-      console.log("ICE connection state changed:", pc.iceConnectionState);
-      setIceConnectionState(pc.iceConnectionState);
-      if (pc.iceConnectionState === "failed") {
-        console.error("ICE connection failed");
-        if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
-          console.log("Attempting to reconnect ICE connection");
-          reconnectAttemptsRef.current += 1;
+      if (
+        pc.connectionState === "failed" ||
+        pc.connectionState === "disconnected"
+      ) {
+        setRemoteStream(null);
+        setError(new Error(`Connection ${pc.connectionState}`));
+
+        if (
+          pc.connectionState === "disconnected" &&
+          reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS
+        ) {
+          console.log("Attempting to reconnect...");
+          reconnectAttemptsRef.current++;
           cleanup();
           createPeerConnection();
         }
       }
-    };
+    },
+    [cleanup]
+  );
 
-    pc.onconnectionstatechange = () => {
-      console.log("Connection state changed:", pc.connectionState);
-      setConnectionState(pc.connectionState);
-      if (
-        pc.connectionState === "failed" &&
-        reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS
-      ) {
-        console.log("Connection failed, attempting to reconnect");
-        reconnectAttemptsRef.current += 1;
-        cleanup();
-        createPeerConnection();
-      }
-    };
+  const setupPeerConnectionListeners = useCallback(
+    (pc: RTCPeerConnection) => {
+      pc.onconnectionstatechange = () => handleConnectionStateChange(pc);
 
-    pc.ontrack = (event) => {
-      console.log("Received remote track");
-      const [stream] = event.streams;
-      setRemoteStream(stream);
-    };
+      pc.oniceconnectionstatechange = () => {
+        setIceConnectionState(pc.iceConnectionState);
+        if (pc.iceConnectionState === "failed") {
+          setError(new Error("ICE connection failed"));
+        }
+      };
 
-    setPeerConnection(pc);
-    return pc;
-  }, [config, socket]);
+      pc.onsignalingstatechange = () => {
+        setSignalingState(pc.signalingState);
+      };
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate && socket?.connected) {
+          socket.emit("webrtc-ice-candidate", {
+            toUserId: toUserIdRef.current,
+            candidate: event.candidate,
+          });
+        }
+      };
+
+      pc.ontrack = (event) => {
+        if (event.streams[0]) {
+          setRemoteStream(event.streams[0]);
+
+          // Monitor track state
+          event.track.onended = () =>
+            console.log("Remote track ended:", event.track.id);
+          event.track.onmute = () =>
+            console.log("Remote track muted:", event.track.id);
+          event.track.onunmute = () =>
+            console.log("Remote track unmuted:", event.track.id);
+
+          // Monitor stream removal
+          event.streams[0].onremovetrack = () => {
+            if (event.streams[0].getTracks().length === 0) {
+              setRemoteStream(null);
+            }
+          };
+        }
+      };
+    },
+    [socket, handleConnectionStateChange]
+  );
+
+  const createPeerConnection = useCallback(() => {
+    try {
+      const pc = new RTCPeerConnection(config);
+      setupPeerConnectionListeners(pc);
+      setPeerConnection(pc);
+      return pc;
+    } catch (err) {
+      console.error("Error creating peer connection:", err);
+      setError(err as Error);
+      return null;
+    }
+  }, [config, setupPeerConnectionListeners]);
 
   const addIceCandidate = useCallback(
-    (candidate: RTCIceCandidate) => {
-      if (!peerConnection) return;
-
-      if (peerConnection.remoteDescription) {
-        peerConnection.addIceCandidate(candidate).catch((error) => {
-          console.error("Error adding ICE candidate:", error);
-        });
-      } else {
+    async (candidate: RTCIceCandidate) => {
+      if (!peerConnection) {
         pendingIceCandidatesRef.current.push(candidate);
+        return;
+      }
+
+      try {
+        if (peerConnection.remoteDescription) {
+          await peerConnection.addIceCandidate(candidate);
+        } else {
+          pendingIceCandidatesRef.current.push(candidate);
+        }
+      } catch (error) {
+        console.error("Error adding ICE candidate:", error);
+        setError(error as Error);
       }
     },
     [peerConnection]
   );
 
-  const processPendingIceCandidates = useCallback(() => {
+  const processPendingIceCandidates = useCallback(async () => {
     if (!peerConnection) return;
 
-    pendingIceCandidatesRef.current.forEach((candidate) => {
-      addIceCandidate(candidate);
-    });
+    const candidates = [...pendingIceCandidatesRef.current];
     pendingIceCandidatesRef.current = [];
+
+    for (const candidate of candidates) {
+      await addIceCandidate(candidate);
+    }
   }, [peerConnection, addIceCandidate]);
 
-  const cleanup = useCallback(() => {
-    console.log("Cleaning up peer connection");
-    if (peerConnection) {
-      try {
-        peerConnection.close();
-      } catch (error) {
-        console.error("Error closing peer connection:", error);
-      }
-      setPeerConnection(null);
-    }
-    setRemoteStream(null);
-    pendingIceCandidatesRef.current = [];
-    toUserIdRef.current = "";
-    reconnectAttemptsRef.current = 0;
-  }, [peerConnection]);
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cleanup();
+    };
+  }, [cleanup]);
 
   return {
     peerConnection,
     remoteStream,
     connectionState,
     iceConnectionState,
+    signalingState,
+    error,
     createPeerConnection,
     addIceCandidate,
     processPendingIceCandidates,
