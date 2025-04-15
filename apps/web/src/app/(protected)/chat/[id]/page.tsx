@@ -101,6 +101,7 @@ const Page = () => {
     if (!socket) return;
 
     const handleMessage = (message: ChatMessage) => {
+      console.log("received message", message);
       queryClient.setQueryData(
         trpc.getChat.queryKey({
           userIds: [userId],
