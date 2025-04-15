@@ -10,6 +10,25 @@ import {
 import { AuthService } from '@server/auth/auth.service';
 import { Server, Socket } from 'socket.io';
 
+type TypingEvent = {
+  toUserId: string;
+  chatId: string;
+};
+
+type CallEvent = {
+  toUserId: string;
+  offer?: any;
+  type?: string;
+  answer?: any;
+  candidate?: any;
+};
+
+type SocketWithUser = Socket & {
+  data: {
+    userId: string;
+  };
+};
+
 @WebSocketGateway({
   cors: {
     origin: '*',
@@ -27,7 +46,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return this.users.get(userId);
   }
 
-  async handleConnection(@ConnectedSocket() client: Socket) {
+  async handleConnection(@ConnectedSocket() client: SocketWithUser) {
     const token = client.handshake.auth.token as string;
 
     const payload = await this.authService.verifyToken(token);
@@ -41,7 +60,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.users.set(payload.userId, client.id);
   }
 
-  handleDisconnect(@ConnectedSocket() client: Socket) {
+  handleDisconnect(@ConnectedSocket() client: SocketWithUser) {
     const userId = client.data.userId;
     if (userId) {
       this.users.delete(userId);
@@ -50,7 +69,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('start-call')
-  handleStartCall(@ConnectedSocket() client: Socket, @MessageBody() data: any) {
+  handleStartCall(
+    @ConnectedSocket() client: SocketWithUser,
+    @MessageBody() data: CallEvent,
+  ) {
     console.log('received start call event', data);
     const fromUserId = client.data.userId;
     const { toUserId, offer, type } = data;
@@ -67,7 +89,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('end-call')
-  handleEndCall(@ConnectedSocket() client: Socket, @MessageBody() data: any) {
+  handleEndCall(
+    @ConnectedSocket() client: SocketWithUser,
+    @MessageBody() data: CallEvent,
+  ) {
     console.log('received end call event', data);
     const { toUserId } = data;
     const targetSocketId = this.users.get(toUserId);
@@ -79,11 +104,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('answer-call')
   handleAnswerCall(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() data: any,
+    @ConnectedSocket() client: SocketWithUser,
+    @MessageBody() data: CallEvent,
   ) {
     const fromUserId = client.data.userId;
-
     const { answer, toUserId } = data;
 
     const targetSocketId = this.users.get(toUserId);
@@ -97,10 +121,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('webrtc-ice-candidate')
   handleIceCandidate(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() data: any,
+    @ConnectedSocket() client: SocketWithUser,
+    @MessageBody() data: CallEvent,
   ) {
-    // console.log('receiving ice-candidate event', data);
     const fromUserId = client.data.userId;
     const { candidate, toUserId } = data;
 
@@ -114,33 +137,38 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('typing')
-  handleTyping(@ConnectedSocket() client: Socket, @MessageBody() data: any) {
+  handleTyping(
+    @ConnectedSocket() client: SocketWithUser,
+    @MessageBody() data: TypingEvent,
+  ) {
     const fromUserId = client.data.userId;
-    const { toUserId } = data;
+    const { toUserId, chatId } = data;
     const targetSocketId = this.users.get(toUserId);
-    console.log({ data, fromUserId, toUserId, targetSocketId });
+
     if (!targetSocketId) return;
 
+    // Only emit to the specific user who should see the typing indicator
     this.server.to(targetSocketId).emit('typing', {
       fromUserId,
+      chatId,
     });
   }
 
   @SubscribeMessage('stop-typing')
   handleStopTyping(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() data: any,
+    @ConnectedSocket() client: SocketWithUser,
+    @MessageBody() data: TypingEvent,
   ) {
-    console.log('receiving stop event', data);
     const fromUserId = client.data.userId;
-
-    const { toUserId } = data;
+    const { toUserId, chatId } = data;
     const targetSocketId = this.users.get(toUserId);
 
     if (!targetSocketId) return;
 
+    // Only emit to the specific user who should see the typing indicator
     this.server.to(targetSocketId).emit('stop-typing', {
       fromUserId,
+      chatId,
     });
   }
 }
