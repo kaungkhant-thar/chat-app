@@ -20,11 +20,11 @@ export const MessageList = ({ messages, currentUserId }: MessageListProps) => {
   let lastDate = "";
 
   messages.forEach((message, index) => {
-    const currentDate = new Date(message.createdAt).toLocaleDateString();
+    const messageDate = new Date(message.createdAt);
+    const currentDate = messageDate.toLocaleDateString();
     const nextMessage = messages[index + 1];
     const prevMessage = messages[index - 1];
 
-    // Add date separator if date changes
     if (currentDate !== lastDate) {
       elements.push(
         <DateSeparator key={`date-${currentDate}`} date={currentDate} />
@@ -32,7 +32,6 @@ export const MessageList = ({ messages, currentUserId }: MessageListProps) => {
       lastDate = currentDate;
     }
 
-    // Determine if we should show avatar based on message grouping
     const showAvatar =
       !prevMessage ||
       prevMessage.senderId !== message.senderId ||
@@ -40,12 +39,37 @@ export const MessageList = ({ messages, currentUserId }: MessageListProps) => {
         new Date(prevMessage.createdAt).getTime() >
         300000;
 
+    const nextMessageFromSameSender =
+      nextMessage &&
+      nextMessage.senderId === message.senderId &&
+      new Date(nextMessage.createdAt).getTime() -
+        new Date(message.createdAt).getTime() <=
+        300000;
+
+    const prevMessageFromSameSender =
+      prevMessage &&
+      prevMessage.senderId === message.senderId &&
+      new Date(message.createdAt).getTime() -
+        new Date(prevMessage.createdAt).getTime() <=
+        300000;
+
+    let messagePosition: "single" | "first" | "middle" | "last" = "single";
+
+    if (prevMessageFromSameSender && nextMessageFromSameSender) {
+      messagePosition = "middle";
+    } else if (prevMessageFromSameSender) {
+      messagePosition = "last";
+    } else if (nextMessageFromSameSender) {
+      messagePosition = "first";
+    }
+
     elements.push(
       <ChatMessage
         key={message.id}
         {...message}
         isCurrentUser={message.senderId === currentUserId}
         showAvatar={showAvatar}
+        messagePosition={messagePosition}
       />
     );
   });
