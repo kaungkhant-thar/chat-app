@@ -59,6 +59,9 @@ export class ChatsService {
         senderId: userId,
         chatId,
       },
+      include: {
+        sender: true,
+      },
     });
 
     const chatUsers = await this.prismaService.chatUser.findMany({

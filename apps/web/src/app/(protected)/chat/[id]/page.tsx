@@ -113,7 +113,7 @@ const Page = () => {
             ...message,
             sender: {
               id: message.senderId,
-              name: message.sender.name,
+              name: message.sender?.name || "Unknown",
             },
           };
 
