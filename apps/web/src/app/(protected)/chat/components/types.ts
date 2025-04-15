@@ -8,6 +8,10 @@ export type ChatMessage = Message & {
   isCurrentUser?: boolean;
   showAvatar?: boolean;
   messagePosition?: "single" | "first" | "middle" | "last";
+  sender: {
+    id: string;
+    name: string;
+  };
 };
 
 export type DateSeparatorProps = {

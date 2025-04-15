@@ -20,13 +20,17 @@ export const protectedProcedure = procedure.use(async (opts) => {
 
   const user = await ctx.appContext.getAuthService().verifyToken(tokenValue);
 
-  if (!user) {
+  const profile = await ctx.appContext
+    .getAuthService()
+    .profile(user?.userId || '');
+
+  if (!profile) {
     throw new Error('Unauthorized');
   }
 
   return opts.next({
     ctx: {
-      user,
+      user: profile,
     },
   });
 });

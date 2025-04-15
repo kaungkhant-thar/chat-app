@@ -9,7 +9,7 @@ export const chatsRouter = router({
   createChat: protectedProcedure
     .input(CreateChatSchema)
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.user.userId;
+      const userId = ctx.user?.id;
       const { userIds } = input;
       return ctx.appContext.getChatsService().createChat([userId, ...userIds]);
     }),
@@ -17,7 +17,7 @@ export const chatsRouter = router({
   getChat: protectedProcedure
     .input(GetChatSchema)
     .query(async ({ ctx, input }) => {
-      const userId = ctx.user.userId;
+      const userId = ctx.user.id;
       const { userIds } = input;
       return ctx.appContext
         .getChatsService()
@@ -27,7 +27,7 @@ export const chatsRouter = router({
   sendMessage: protectedProcedure
     .input(SendMessageSchema)
     .mutation(async ({ ctx, input }) => {
-      const userId = ctx.user.userId;
+      const userId = ctx.user.id;
       return ctx.appContext.getChatsService().sendMessage(input, userId);
     }),
 });

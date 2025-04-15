@@ -147,7 +147,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     if (!targetSocketId) return;
 
-    // Only emit to the specific user who should see the typing indicator
     this.server.to(targetSocketId).emit('typing', {
       fromUserId,
       chatId,
@@ -165,7 +164,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     if (!targetSocketId) return;
 
-    // Only emit to the specific user who should see the typing indicator
     this.server.to(targetSocketId).emit('stop-typing', {
       fromUserId,
       chatId,
