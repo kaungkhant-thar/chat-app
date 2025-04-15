@@ -1,11 +1,34 @@
 import { SendHorizontal } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import {
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+  useEffect,
+  useCallback,
+} from "react";
 import { type ChatInputProps } from "./types";
 import { Textarea } from "@web/components/ui/textarea";
 import { Button } from "@web/components/ui/button";
+import { useSocket } from "@web/context/socket.context";
 
-export const ChatInput = ({ onSendMessage, isLoading }: ChatInputProps) => {
+export const ChatInput = ({
+  onSendMessage,
+  isLoading,
+  chatId,
+  toUserId,
+}: ChatInputProps) => {
   const [message, setMessage] = useState("");
+  const { socket } = useSocket();
+
+  const emitTyping = useCallback(() => {
+    if (!socket) return;
+    socket.emit("typing", { chatId, toUserId });
+  }, [socket, chatId, toUserId]);
+
+  const emitStopTyping = useCallback(() => {
+    if (!socket) return;
+    socket.emit("stop-typing", { chatId, toUserId });
+  }, [socket, chatId, toUserId]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -13,7 +36,22 @@ export const ChatInput = ({ onSendMessage, isLoading }: ChatInputProps) => {
 
     onSendMessage(message);
     setMessage("");
+    emitStopTyping();
   };
+
+  // Debounced typing effect
+  useEffect(() => {
+    let typingTimer: NodeJS.Timeout;
+
+    if (message.trim()) {
+      emitTyping();
+      typingTimer = setTimeout(emitStopTyping, 1500);
+    }
+
+    return () => {
+      clearTimeout(typingTimer);
+    };
+  }, [message, emitTyping, emitStopTyping]);
 
   return (
     <form
