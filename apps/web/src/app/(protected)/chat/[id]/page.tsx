@@ -101,6 +101,7 @@ const Page = () => {
     if (!socket) return;
 
     const handleMessage = (message: ChatMessage) => {
+      console.log("received message", message);
       queryClient.setQueryData(
         trpc.getChat.queryKey({
           userIds: [userId],
@@ -112,7 +113,7 @@ const Page = () => {
             ...message,
             sender: {
               id: message.senderId,
-              name: message.sender.name,
+              name: message.sender?.name || "Unknown",
             },
           };
 

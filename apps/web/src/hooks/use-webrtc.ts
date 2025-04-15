@@ -61,14 +61,7 @@ export const useWebRTC = () => {
 
     socket.on("call-answered", (data) => {
       const { answer } = data;
-      if (peerConnection?.signalingState !== "have-local-offer") {
-        console.error(
-          "Invalid signaling state for setting remote answer:",
-          peerConnection?.signalingState
-        );
-        return;
-      }
-
+      console.log("received call answer", { answer, peerConnection });
       peerConnection
         ?.setRemoteDescription(new RTCSessionDescription(answer))
         .then(() => {
