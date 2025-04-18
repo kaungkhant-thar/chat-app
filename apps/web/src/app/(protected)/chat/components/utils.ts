@@ -4,21 +4,27 @@ export const getBorderRadiusClass = (
   isCurrentUser: boolean,
   messagePosition: "single" | "first" | "middle" | "last"
 ) => {
-  const base = isCurrentUser ? "rounded-l-2xl" : "rounded-r-2xl";
-
   switch (messagePosition) {
     case "single":
       return "rounded-2xl";
     case "first":
-      return cn(
-        base,
-        isCurrentUser ? "rounded-tr-2xl" : "rounded-tl-2xl",
-        "rounded-b-2xl"
-      );
+      if (isCurrentUser) {
+        return "rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl"; // Right side sender, first message
+      } else {
+        return "rounded-tl-2xl rounded-tr-2xl rounded-br-2xl"; // Left side sender, first message
+      }
     case "middle":
-      return base;
+      if (isCurrentUser) {
+        return "rounded-l-2xl"; // Right side sender, middle message
+      } else {
+        return "rounded-r-2xl"; // Left side sender, middle message
+      }
     case "last":
-      return cn(base, isCurrentUser ? "rounded-br-2xl" : "rounded-bl-2xl");
+      if (isCurrentUser) {
+        return "rounded-bl-2xl rounded-br-2xl rounded-tl-2xl"; // Right side sender, last message
+      } else {
+        return "rounded-bl-2xl rounded-br-2xl rounded-tr-2xl"; // Left side sender, last message
+      }
     default:
       return "rounded-2xl";
   }
