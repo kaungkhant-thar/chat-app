@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { ChatGateway } from './chat.gateway';
-import { SendMessageInput } from '@shared/schemas';
+import { ReactToMessageInput, SendMessageInput } from '@shared/schemas';
 
 @Injectable()
 export class ChatsService {
@@ -23,6 +23,10 @@ export class ChatsService {
       },
       include: {
         messages: {
+          take: 20,
+          orderBy: {
+            createdAt: 'desc',
+          },
           include: {
             sender: {
               select: {
@@ -30,10 +34,75 @@ export class ChatsService {
                 id: true,
               },
             },
+            reactions: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
     });
+    return chat;
+  }
+
+  async getChats(userId: string) {
+    const chats = await this.prismaService.chat.findMany({
+      where: {
+        users: {
+          some: { userId },
+        },
+      },
+      include: {
+        messages: {
+          take: 1,
+          orderBy: {
+            createdAt: 'desc',
+          },
+        },
+        users: {
+          select: {
+            user: true,
+          },
+        },
+      },
+    });
+    return chats;
+  }
+
+  async getChatById(chatId: string) {
+    const chat = await this.prismaService.chat.findUnique({
+      where: {
+        id: chatId,
+      },
+      include: {
+        messages: {
+          take: 20,
+          include: {
+            sender: true,
+            reactions: {
+              include: {
+                user: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        },
+        users: {
+          select: {
+            user: true,
+          },
+        },
+      },
+    });
+
     return chat;
   }
 
@@ -68,13 +137,42 @@ export class ChatsService {
       where: { chatId },
       select: { userId: true },
     });
-    console.log({ chatUsers });
 
     chatUsers.forEach(({ userId }) => {
       const socketId = this.chatGateway.getSocketId(userId);
       if (socketId) {
         this.chatGateway.server.to(socketId).emit('message', message);
       }
+    });
+  }
+
+  async reactToMessage(
+    { messageId, emoji }: ReactToMessageInput,
+    userId: string,
+  ) {
+    const existingReaction = await this.prismaService.reaction.findFirst({
+      where: {
+        messageId,
+        userId,
+        emoji,
+      },
+    });
+
+    if (existingReaction) {
+      await this.prismaService.reaction.delete({
+        where: {
+          id: existingReaction.id,
+        },
+      });
+      return;
+    }
+
+    await this.prismaService.reaction.create({
+      data: {
+        emoji,
+        messageId,
+        userId,
+      },
     });
   }
 }

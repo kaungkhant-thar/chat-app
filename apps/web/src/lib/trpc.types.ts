@@ -1,6 +1,5 @@
-import { AppRouter } from "@server/trpc/trpc.router";
-import { inferRouterOutputs } from "@trpc/server";
+import { type AppRouter } from "@server/trpc/trpc.router";
+import { type inferRouterOutputs } from "@trpc/server";
 
-type RouterOutput = inferRouterOutputs<AppRouter>;
-
+export type RouterOutput = inferRouterOutputs<AppRouter>;
 export type ChatType = RouterOutput["getChat"];

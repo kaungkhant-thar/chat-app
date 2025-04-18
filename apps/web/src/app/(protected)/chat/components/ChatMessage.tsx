@@ -3,46 +3,102 @@
 import { cn } from "@web/lib/utils";
 import { type ChatMessage as ChatMessageType } from "./types";
 import { Avatar, AvatarFallback } from "@web/components/ui/avatar";
+import { useState, useCallback, useEffect } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { useTRPC } from "@web/lib/trpc";
+import { LONG_PRESS_DURATION } from "./constants";
+import { ReactionBar } from "./ReactionBar";
+import { MessageReactions } from "./MessageReactions";
+import {
+  getBorderRadiusClass,
+  shouldShowTime,
+  isEmojiOnlyMessage,
+} from "./utils";
+import { useSocket } from "@web/context/socket.context";
+import { Dialog, DialogContent, DialogTitle } from "@web/components/ui/dialog";
+import { VisuallyHidden } from "@web/components/ui/visually-hidden";
+import Picker from "@emoji-mart/react";
+import data from "@emoji-mart/data";
 
-const getBorderRadiusClass = (
-  isCurrentUser: boolean,
-  messagePosition: "single" | "first" | "middle" | "last"
-) => {
-  const base = isCurrentUser ? "rounded-l-2xl" : "rounded-r-2xl";
-
-  switch (messagePosition) {
-    case "single":
-      return "rounded-2xl";
-    case "first":
-      return cn(
-        base,
-        isCurrentUser ? "rounded-tr-2xl" : "rounded-tl-2xl",
-        "rounded-b-2xl"
-      );
-    case "middle":
-      return base;
-    case "last":
-      return cn(base, isCurrentUser ? "rounded-br-2xl" : "rounded-bl-2xl");
-    default:
-      return "rounded-2xl";
-  }
+type ChatMessageProps = ChatMessageType & {
+  chatId: string;
 };
 
-const shouldShowTime = (
-  messagePosition: "single" | "first" | "middle" | "last"
-) => {
-  return messagePosition === "single" || messagePosition === "last";
-};
-
-const ChatMessage = ({
+export const ChatMessage = ({
   content,
   isCurrentUser = false,
   showAvatar,
   messagePosition = "single",
   createdAt,
   sender,
-}: ChatMessageType) => {
+  id,
+  reactions,
+  chatId,
+}: ChatMessageProps) => {
+  console.log({ content });
+  const trpc = useTRPC();
+  const { socket } = useSocket();
+  const reactMutation = useMutation(trpc.reactMessage.mutationOptions());
+  const [showReactionBar, setShowReactionBar] = useState(false);
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(
+    null
+  );
+
+  const handleTouchStart = useCallback(() => {
+    const timer = setTimeout(() => {
+      setShowReactionBar(true);
+    }, LONG_PRESS_DURATION);
+    setLongPressTimer(timer);
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  }, [longPressTimer]);
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+  };
+
+  const handleReactionClick = async (emoji: string) => {
+    try {
+      await reactMutation.mutateAsync({
+        emoji,
+        messageId: id,
+      });
+
+      // Emit socket event for real-time updates
+      if (socket?.connected) {
+        console.log("Emitting reaction event");
+        socket.emit("reaction", {
+          messageId: id,
+          emoji,
+          chatId,
+        });
+      } else {
+        console.error("Socket not connected");
+      }
+
+      setShowReactionBar(false);
+    } catch (error) {
+      console.error("Error adding reaction:", error);
+    }
+  };
+
+  const handleMoreClick = () => {
+    setIsEmojiPickerOpen(true);
+  };
+
+  const handleEmojiSelect = (emoji: any) => {
+    handleReactionClick(emoji.native);
+    setIsEmojiPickerOpen(false);
+  };
+
   const showTime = shouldShowTime(messagePosition);
+  const isEmojiOnly = isEmojiOnlyMessage(content);
 
   return (
     <div
@@ -66,15 +122,53 @@ const ChatMessage = ({
       {!showAvatar && <div className="w-8" />}
       <div
         className={cn(
-          "my-0.5 max-w-[80%] px-4 py-2",
+          "relative my-0.5 max-w-[80%] px-4 py-2 select-none touch-none",
           getBorderRadiusClass(isCurrentUser, messagePosition),
-          isCurrentUser
+          isEmojiOnly
+            ? ""
+            : isCurrentUser
             ? "bg-blue-500 text-white"
             : "bg-gray-200 text-gray-900",
-          !showTime && "py-1.5" // Slightly reduce padding when no time is shown
+          !showTime && "py-1.5",
+          reactions.length > 0 && "mb-5",
+          isEmojiOnly && "!px-3 !py-1"
         )}
+        onMouseEnter={() => setShowReactionBar(true)}
+        onMouseLeave={() => setShowReactionBar(false)}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchMove={handleTouchEnd}
+        onContextMenu={handleContextMenu}
       >
-        <p className="break-words text-sm">{content}</p>
+        {showReactionBar && (
+          <ReactionBar
+            onReactionClick={handleReactionClick}
+            onMoreClick={handleMoreClick}
+            isCurrentUser={isCurrentUser}
+          />
+        )}
+        <Dialog open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
+          <DialogTitle>
+            <VisuallyHidden>Emoji Picker</VisuallyHidden>
+          </DialogTitle>
+          <DialogContent className="p-0 border rounded-lg shadow-lg w-[340px]">
+            <Picker
+              data={data}
+              onEmojiSelect={handleEmojiSelect}
+              theme="light"
+              previewPosition="none"
+              maxFrequentRows={1}
+            />
+          </DialogContent>
+        </Dialog>
+        <p
+          className={cn(
+            "break-words",
+            isEmojiOnly ? "text-4xl leading-none" : "text-sm"
+          )}
+        >
+          {content}
+        </p>
         {showTime && (
           <p className="mt-1 text-xs opacity-50">
             {new Date(createdAt).toLocaleTimeString([], {
@@ -83,9 +177,13 @@ const ChatMessage = ({
             })}
           </p>
         )}
+        <MessageReactions
+          reactions={reactions}
+          isCurrentUser={isCurrentUser}
+          onReactionClick={handleReactionClick}
+          setShowReactionBar={setShowReactionBar}
+        />
       </div>
     </div>
   );
 };
-
-export { ChatMessage };

@@ -22,6 +22,7 @@ model User {
 
   messages Message[]
   chats    ChatUser[]
+  reactions Reaction[]
 }
 
 model Chat {
@@ -45,6 +46,8 @@ model Message {
   chatId String
   chat   Chat   @relation(fields: [chatId], references: [id])
 
+  reactions Reaction[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -57,4 +60,21 @@ model ChatUser {
   chatId String
 
   @@id([userId, chatId])
+}
+
+
+model Reaction {
+  id String @id @default(uuid())
+  emoji String
+
+  userId String
+  user User @relation(fields: [userId], references: [id])
+  messageId String
+  message Message @relation(fields: [messageId], references: [id])
+
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, messageId, emoji])
+
 }

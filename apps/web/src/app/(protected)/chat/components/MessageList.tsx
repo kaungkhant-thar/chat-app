@@ -5,11 +5,15 @@ import { EmptyChat } from "./EmptyChat";
 import { useRef, useEffect } from "react";
 import { ChatMessage } from "./ChatMessage";
 
-export const MessageList = ({ messages, currentUserId }: MessageListProps) => {
-  const messageEndRef = useRef<HTMLDivElement>(null);
+export const MessageList = ({
+  messages,
+  currentUserId,
+  chatId,
+}: MessageListProps) => {
+  const messageStartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messageStartRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   if (!messages.length) {
@@ -19,39 +23,33 @@ export const MessageList = ({ messages, currentUserId }: MessageListProps) => {
   const elements: React.ReactNode[] = [];
   let lastDate = "";
 
-  messages.forEach((message, index) => {
+  const sortedMessages = [...messages].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
+
+  sortedMessages.forEach((message, index) => {
     const messageDate = new Date(message.createdAt);
     const currentDate = messageDate.toLocaleDateString();
-    const nextMessage = messages[index + 1];
-    const prevMessage = messages[index - 1];
+
+    const nextMessage = sortedMessages[index + 1] || null;
+    const prevMessage = index > 0 ? sortedMessages[index - 1] : null;
 
     if (currentDate !== lastDate) {
       elements.push(
-        <DateSeparator key={`date-${currentDate}`} date={currentDate} />
+        <DateSeparator
+          key={`date-${currentDate}-${index}`}
+          date={messageDate.toISOString()}
+        />
       );
       lastDate = currentDate;
     }
 
     const showAvatar =
-      !prevMessage ||
-      prevMessage.senderId !== message.senderId ||
-      new Date(message.createdAt).getTime() -
-        new Date(prevMessage.createdAt).getTime() >
-        300000;
-
+      !prevMessage || prevMessage.senderId !== message.senderId;
     const nextMessageFromSameSender =
-      nextMessage &&
-      nextMessage.senderId === message.senderId &&
-      new Date(nextMessage.createdAt).getTime() -
-        new Date(message.createdAt).getTime() <=
-        300000;
-
+      nextMessage?.senderId === message.senderId;
     const prevMessageFromSameSender =
-      prevMessage &&
-      prevMessage.senderId === message.senderId &&
-      new Date(message.createdAt).getTime() -
-        new Date(prevMessage.createdAt).getTime() <=
-        300000;
+      prevMessage?.senderId === message.senderId;
 
     let messagePosition: "single" | "first" | "middle" | "last" = "single";
 
@@ -70,6 +68,7 @@ export const MessageList = ({ messages, currentUserId }: MessageListProps) => {
         isCurrentUser={message.senderId === currentUserId}
         showAvatar={showAvatar}
         messagePosition={messagePosition}
+        chatId={chatId}
       />
     );
   });
@@ -77,7 +76,7 @@ export const MessageList = ({ messages, currentUserId }: MessageListProps) => {
   return (
     <div className="flex flex-1 flex-col overflow-y-auto p-4">
       {elements}
-      <div ref={messageEndRef} />
+      <div ref={messageStartRef} />
     </div>
   );
 };
