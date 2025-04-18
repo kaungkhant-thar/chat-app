@@ -4,7 +4,7 @@ import { PeerConnectionConfig } from "./types/webrtc";
 
 const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
   {
-    urls: `stun:${process.env.NEXT_PUBLIC_TURN_URL}:3478`, // TURN/STUN URL
+    urls: `stun:${process.env.NEXT_PUBLIC_TURN_URL}:3478`,
   },
   {
     urls: `turn:${process.env.NEXT_PUBLIC_TURN_URL}:3478`,
