@@ -82,6 +82,7 @@ export class ChatsService {
       },
       include: {
         messages: {
+          take: 20,
           include: {
             sender: true,
             reactions: {
@@ -91,10 +92,14 @@ export class ChatsService {
             },
           },
           orderBy: {
-            createdAt: 'asc',
+            createdAt: 'desc',
           },
         },
-        users: true,
+        users: {
+          select: {
+            user: true,
+          },
+        },
       },
     });
 
@@ -132,7 +137,6 @@ export class ChatsService {
       where: { chatId },
       select: { userId: true },
     });
-    console.log({ chatUsers });
 
     chatUsers.forEach(({ userId }) => {
       const socketId = this.chatGateway.getSocketId(userId);

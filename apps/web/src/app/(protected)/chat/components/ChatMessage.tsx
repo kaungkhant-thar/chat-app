@@ -9,8 +9,16 @@ import { useTRPC } from "@web/lib/trpc";
 import { LONG_PRESS_DURATION } from "./constants";
 import { ReactionBar } from "./ReactionBar";
 import { MessageReactions } from "./MessageReactions";
-import { getBorderRadiusClass, shouldShowTime } from "./utils";
+import {
+  getBorderRadiusClass,
+  shouldShowTime,
+  isEmojiOnlyMessage,
+} from "./utils";
 import { useSocket } from "@web/context/socket.context";
+import { Dialog, DialogContent, DialogTitle } from "@web/components/ui/dialog";
+import { VisuallyHidden } from "@web/components/ui/visually-hidden";
+import Picker from "@emoji-mart/react";
+import data from "@emoji-mart/data";
 
 type ChatMessageProps = ChatMessageType & {
   chatId: string;
@@ -27,21 +35,15 @@ export const ChatMessage = ({
   reactions,
   chatId,
 }: ChatMessageProps) => {
+  console.log({ content });
   const trpc = useTRPC();
   const { socket } = useSocket();
   const reactMutation = useMutation(trpc.reactMessage.mutationOptions());
   const [showReactionBar, setShowReactionBar] = useState(false);
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(
     null
   );
-
-  // Debug socket connection
-  useEffect(() => {
-    console.log("Socket connection status:", socket?.connected);
-    if (socket) {
-      console.log("Socket ID:", socket.id);
-    }
-  }, [socket]);
 
   const handleTouchStart = useCallback(() => {
     const timer = setTimeout(() => {
@@ -63,8 +65,6 @@ export const ChatMessage = ({
 
   const handleReactionClick = async (emoji: string) => {
     try {
-      console.log("Adding reaction:", { emoji, messageId: id, chatId });
-
       await reactMutation.mutateAsync({
         emoji,
         messageId: id,
@@ -89,10 +89,16 @@ export const ChatMessage = ({
   };
 
   const handleMoreClick = () => {
-    console.log("More reactions clicked");
+    setIsEmojiPickerOpen(true);
+  };
+
+  const handleEmojiSelect = (emoji: any) => {
+    handleReactionClick(emoji.native);
+    setIsEmojiPickerOpen(false);
   };
 
   const showTime = shouldShowTime(messagePosition);
+  const isEmojiOnly = isEmojiOnlyMessage(content);
 
   return (
     <div
@@ -118,11 +124,14 @@ export const ChatMessage = ({
         className={cn(
           "relative my-0.5 max-w-[80%] px-4 py-2 select-none touch-none",
           getBorderRadiusClass(isCurrentUser, messagePosition),
-          isCurrentUser
+          isEmojiOnly
+            ? ""
+            : isCurrentUser
             ? "bg-blue-500 text-white"
             : "bg-gray-200 text-gray-900",
           !showTime && "py-1.5",
-          reactions.length > 0 && "mb-5"
+          reactions.length > 0 && "mb-5",
+          isEmojiOnly && "!px-3 !py-1"
         )}
         onMouseEnter={() => setShowReactionBar(true)}
         onMouseLeave={() => setShowReactionBar(false)}
@@ -138,7 +147,28 @@ export const ChatMessage = ({
             isCurrentUser={isCurrentUser}
           />
         )}
-        <p className="break-words text-sm">{content}</p>
+        <Dialog open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
+          <DialogTitle>
+            <VisuallyHidden>Emoji Picker</VisuallyHidden>
+          </DialogTitle>
+          <DialogContent className="p-0 border rounded-lg shadow-lg w-[340px]">
+            <Picker
+              data={data}
+              onEmojiSelect={handleEmojiSelect}
+              theme="light"
+              previewPosition="none"
+              maxFrequentRows={1}
+            />
+          </DialogContent>
+        </Dialog>
+        <p
+          className={cn(
+            "break-words",
+            isEmojiOnly ? "text-4xl leading-none" : "text-sm"
+          )}
+        >
+          {content}
+        </p>
         {showTime && (
           <p className="mt-1 text-xs opacity-50">
             {new Date(createdAt).toLocaleTimeString([], {

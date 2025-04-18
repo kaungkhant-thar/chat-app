@@ -12,32 +12,24 @@ import { MessageList } from "../components/MessageList";
 import UserIsTyping from "../components/UserIsTyping";
 import { useChatReactions } from "@web/hooks/use-chat-reactions";
 
-type SendMessageVariables = {
-  chatId: string;
-  content: string;
-};
-
-const Page = () => {
+const ChatPage = () => {
   const params = useParams<{ id: string }>();
   const chatId = params.id;
   const trpc = useTRPC();
-
   const { socket } = useSocket();
   const queryClient = useQueryClient();
 
   const { data: profile } = useQuery(trpc.profile.queryOptions());
   const { data: chat, refetch } = useQuery(
-    trpc.getChatById.queryOptions({
-      chatId,
-    })
+    trpc.getChatById.queryOptions({ chatId })
   );
 
-  // useChatReactions(chat?.id || "");
+  useChatReactions(chat?.id || "");
 
   const createChatMutation = useMutation(trpc.createChat.mutationOptions());
   const sendMessageMutation = useMutation({
     ...trpc.sendMessage.mutationOptions(),
-    onMutate: async (newMessage: SendMessageVariables) => {
+    onMutate: async (newMessage) => {
       await queryClient.cancelQueries({
         queryKey: trpc.getChatById.queryKey({ chatId: newMessage.chatId }),
       });
@@ -60,7 +52,10 @@ const Page = () => {
                 senderId: profile?.id || "",
                 sender: {
                   id: profile?.id || "",
+                  email: profile?.email || "",
                   name: profile?.name || "",
+                  password: "",
+                  createdAt: new Date().toISOString(),
                 },
                 reactions: [],
                 chatId: newMessage.chatId,
@@ -97,6 +92,7 @@ const Page = () => {
       chatId: chat.id,
       content,
     });
+    refetch();
   };
 
   useEffect(() => {
@@ -114,6 +110,9 @@ const Page = () => {
             sender: {
               id: message.senderId,
               name: message.sender?.name || "Unknown",
+              email: "",
+              password: "",
+              createdAt: new Date().toISOString(),
             },
             reactions: [],
           };
@@ -155,6 +154,8 @@ const Page = () => {
   }, [socket]);
 
   if (!profile) return null;
+  const otherUserId = chat?.users.find((user) => user.user.id !== profile.id)
+    ?.user.id;
 
   return (
     <div className="flex flex-col h-full">
@@ -165,13 +166,13 @@ const Page = () => {
             currentUserId={profile.id}
             chatId={chat.id}
           />
-          <UserIsTyping userId={"2"} chatId={chat.id} />
+          <UserIsTyping userId={otherUserId || ""} chatId={chat.id} />
 
           <ChatInput
             onSendMessage={handleSendMessage}
             isLoading={sendMessageMutation.isPending}
             chatId={chat.id}
-            toUserId={"2"}
+            toUserId={otherUserId || ""}
           />
         </>
       ) : (
@@ -182,7 +183,7 @@ const Page = () => {
               loading={createChatMutation.isPending}
               onClick={async () => {
                 await createChatMutation.mutateAsync({
-                  userIds: ["2"],
+                  userIds: [otherUserId || ""],
                 });
                 refetch();
               }}
@@ -198,4 +199,4 @@ const Page = () => {
   );
 };
 
-export default Page;
+export default ChatPage;

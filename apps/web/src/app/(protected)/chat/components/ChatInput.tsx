@@ -21,7 +21,6 @@ import {
   DialogTrigger,
 } from "@web/components/ui/dialog";
 
-// emoji-mart
 import Picker from "@emoji-mart/react";
 import data from "@emoji-mart/data";
 import { VisuallyHidden } from "@web/components/ui/visually-hidden";

@@ -24,11 +24,10 @@ const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
 
   const { data: profile } = useQuery(trpc.profile.queryOptions());
   const { data: chats = [] } = useQuery(trpc.getChats.queryOptions());
-  console.log(chats);
-
-  const { data: user, isLoading } = useQuery(
-    trpc.findUserById.queryOptions({ id: params.id as string })
+  const { data: chat, isLoading } = useQuery(
+    trpc.getChatById.queryOptions({ chatId: params.id as string })
   );
+  const otherUser = chat?.users.find((u) => u.user.id !== profile?.id)?.user;
 
   useEffect(() => {
     if (hasHydrated && !isAuthenticated) {
@@ -58,7 +57,6 @@ const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div className="grid lg:grid-cols-[280px_1fr] h-screen overflow-hidden">
-      {/* Mobile Overlay */}
       {isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
@@ -66,7 +64,6 @@ const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-50 w-[280px] bg-background border-r lg:static",
@@ -76,8 +73,8 @@ const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
       >
         <div className="flex flex-col h-full">
           <div className="p-4 border-b flex-shrink-0">
-            <h1 className="text-xl font-semibold">Chat App</h1>
-            <p>Logged in as {profile?.email}</p>
+            <h1 className="text-xl font-semibold">Ease Chat</h1>
+            <p>Logged in as {profile?.name}</p>
           </div>
           <nav className="flex-1 overflow-y-auto">
             <ul className="p-4 space-y-2">
@@ -96,9 +93,7 @@ const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
                       )}
                       onClick={handleUserSelect}
                     >
-                      <span className="font-medium">
-                        {otherUser.name || otherUser.email}
-                      </span>
+                      <span className="font-medium">{otherUser.name}</span>
                     </Link>
                   </li>
                 );
@@ -108,7 +103,6 @@ const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
         </div>
       </aside>
 
-      {/* Main Chat Area */}
       <div className="flex flex-col h-full overflow-hidden">
         <header className="h-16 shrink-0 border-b flex items-center px-4 md:px-6 justify-between bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
           <div className="flex items-center gap-4">
@@ -124,13 +118,13 @@ const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
               <Skeleton className="h-6 w-32" />
             ) : (
               <h2 className="text-lg font-medium truncate max-w-[200px] md:max-w-none">
-                {user?.name || user?.email || "Chat"}
+                {otherUser?.name}
               </h2>
             )}
           </div>
 
           <div className="flex items-center gap-2 md:gap-3">
-            {params.id && <CallControls userId={params.id as string} />}
+            {otherUser && <CallControls userId={otherUser.id as string} />}
 
             <Button
               variant="ghost"

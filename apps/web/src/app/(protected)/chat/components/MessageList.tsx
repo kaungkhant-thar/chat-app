@@ -13,7 +13,6 @@ export const MessageList = ({
   const messageStartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // For flex-col-reverse, we scroll to top for new messages
     messageStartRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
@@ -24,20 +23,21 @@ export const MessageList = ({
   const elements: React.ReactNode[] = [];
   let lastDate = "";
 
-  [...messages].reverse().forEach((message, index) => {
+  const sortedMessages = [...messages].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
+
+  sortedMessages.forEach((message, index) => {
     const messageDate = new Date(message.createdAt);
     const currentDate = messageDate.toLocaleDateString();
 
-    const nextMessage = index > 0 ? messages[messages.length - index] : null;
-    const prevMessage =
-      index < messages.length - 1
-        ? messages[messages.length - index - 2]
-        : null;
+    const nextMessage = sortedMessages[index + 1] || null;
+    const prevMessage = index > 0 ? sortedMessages[index - 1] : null;
 
     if (currentDate !== lastDate) {
       elements.push(
         <DateSeparator
-          key={`date-${currentDate}-${messages.length - index - 1}`}
+          key={`date-${currentDate}-${index}`}
           date={messageDate.toISOString()}
         />
       );
@@ -45,25 +45,11 @@ export const MessageList = ({
     }
 
     const showAvatar =
-      !prevMessage ||
-      prevMessage.senderId !== message.senderId ||
-      new Date(message.createdAt).getTime() -
-        new Date(prevMessage.createdAt).getTime() >
-        300000;
-
+      !prevMessage || prevMessage.senderId !== message.senderId;
     const nextMessageFromSameSender =
-      nextMessage &&
-      nextMessage.senderId === message.senderId &&
-      new Date(nextMessage.createdAt).getTime() -
-        new Date(message.createdAt).getTime() <=
-        300000;
-
+      nextMessage?.senderId === message.senderId;
     const prevMessageFromSameSender =
-      prevMessage &&
-      prevMessage.senderId === message.senderId &&
-      new Date(message.createdAt).getTime() -
-        new Date(prevMessage.createdAt).getTime() <=
-        300000;
+      prevMessage?.senderId === message.senderId;
 
     let messagePosition: "single" | "first" | "middle" | "last" = "single";
 

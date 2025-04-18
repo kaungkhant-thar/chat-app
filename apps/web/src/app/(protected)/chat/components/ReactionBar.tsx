@@ -2,7 +2,6 @@ import { Button } from "@web/components/ui/button";
 import { Plus } from "lucide-react";
 import {
   Tooltip,
-  TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@web/components/ui/tooltip";
@@ -23,7 +22,7 @@ export const ReactionBar = ({
   return (
     <div
       className={cn(
-        "absolute -top-7 flex items-center gap-0.5 bg-white dark:bg-gray-800 rounded-full shadow-lg px-1 py-0.5 border border-gray-100 dark:border-gray-700 animate-in fade-in slide-in-from-top-2 duration-200 z-10",
+        "absolute -top-7 flex items-center gap-0.5 bg-white dark:bg-gray-800 rounded-full shadow-lg px-2 py-1 border border-gray-100 dark:border-gray-700 animate-in fade-in slide-in-from-top-2 duration-200 z-10",
         isCurrentUser ? "right-0" : "left-0"
       )}
     >
@@ -40,9 +39,6 @@ export const ReactionBar = ({
                 <span className="text-base">{emoji}</span>
               </Button>
             </TooltipTrigger>
-            <TooltipContent className="text-xs">
-              <p>React with {emoji}</p>
-            </TooltipContent>
           </Tooltip>
         </TooltipProvider>
       ))}

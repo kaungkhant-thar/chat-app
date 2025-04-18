@@ -29,6 +29,7 @@ const UserIsTyping = ({
     if (!socket) return;
 
     const handleTyping = (event: TypingEvent) => {
+      console.log("received typing event", event);
       if (event.chatId === chatId && event.fromUserId === userId) {
         setIsTyping(true);
       }

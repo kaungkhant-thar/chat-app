@@ -8,6 +8,7 @@ import type { AppRouter } from "@server/trpc/trpc.router";
 import { useAuthStore } from "@web/store/auth";
 import { SocketProvider } from "@web/context/socket.context";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { WebRTCProvider } from "@web/context/webrtc.context";
 
 function makeQueryClient() {
   return new QueryClient({
@@ -62,7 +63,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
         <SocketProvider>
-          {children}
+          <WebRTCProvider>{children}</WebRTCProvider>
           <ReactQueryDevtools initialIsOpen={false} />
         </SocketProvider>
       </TRPCProvider>

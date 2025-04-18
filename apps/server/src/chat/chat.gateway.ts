@@ -141,6 +141,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: SocketWithUser,
     @MessageBody() data: TypingEvent,
   ) {
+    console.log('received typing event', data, this.users);
     const fromUserId = client.data.userId;
     const { toUserId, chatId } = data;
     const targetSocketId = this.users.get(toUserId);
@@ -175,7 +176,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: SocketWithUser,
     @MessageBody() data: { messageId: string; emoji: string; chatId: string },
   ) {
-    console.log('receiving reaction event', data);
     const fromUserId = client.data.userId;
     const { messageId, emoji, chatId } = data;
 

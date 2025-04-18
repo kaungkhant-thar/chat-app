@@ -15,7 +15,6 @@ export const MessageReactions = ({
   onReactionClick,
   setShowReactionBar,
 }: MessageReactionsProps) => {
-  // Group reactions by emoji
   const reactionCounts = reactions.reduce<ReactionCount[]>((acc, reaction) => {
     const existing = acc.find((r) => r.emoji === reaction.emoji);
     if (existing) {
@@ -36,7 +35,7 @@ export const MessageReactions = ({
   return (
     <div
       className={cn(
-        "absolute -bottom-4 flex flex-wrap gap-0.5 z-10",
+        "absolute -bottom-3 flex flex-nowrap gap-1 z-10",
         isCurrentUser ? "right-0" : "left-0"
       )}
       onMouseEnter={(e) => {
