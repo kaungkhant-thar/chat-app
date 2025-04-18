@@ -11,6 +11,7 @@ import { ChatInput } from "../components/ChatInput";
 import { MessageList } from "../components/MessageList";
 import UserIsTyping from "../components/UserIsTyping";
 import { useChatReactions } from "@web/hooks/use-chat-reactions";
+import { Loader } from "lucide-react";
 
 const ChatPage = () => {
   const params = useParams<{ id: string }>();
@@ -20,9 +21,11 @@ const ChatPage = () => {
   const queryClient = useQueryClient();
 
   const { data: profile } = useQuery(trpc.profile.queryOptions());
-  const { data: chat, refetch } = useQuery(
-    trpc.getChatById.queryOptions({ chatId })
-  );
+  const {
+    data: chat,
+    refetch,
+    isLoading,
+  } = useQuery(trpc.getChatById.queryOptions({ chatId }));
 
   useChatReactions(chat?.id || "");
 
@@ -154,6 +157,19 @@ const ChatPage = () => {
   }, [socket]);
 
   if (!profile) return null;
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="grid place-items-center place-content-center flex-1 px-4">
+          <div className="flex gap-2 items-center text-center ">
+            <p className="text-muted-foreground">Loading...</p>
+            <Loader className="animate-spin" />
+          </div>
+        </div>
+      </div>
+    );
+  }
   const otherUserId = chat?.users.find((user) => user.user.id !== profile.id)
     ?.user.id;
 

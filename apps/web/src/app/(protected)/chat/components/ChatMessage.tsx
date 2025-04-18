@@ -4,7 +4,7 @@ import { cn } from "@web/lib/utils";
 import { type ChatMessage as ChatMessageType } from "./types";
 import { Avatar, AvatarFallback } from "@web/components/ui/avatar";
 import { useState, useCallback, useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTRPC } from "@web/lib/trpc";
 import { LONG_PRESS_DURATION } from "./constants";
 import { ReactionBar } from "./ReactionBar";
@@ -22,6 +22,12 @@ import {
 } from "@web/components/ui/popover";
 import Picker from "@emoji-mart/react";
 import data from "@emoji-mart/data";
+import { type RouterOutput } from "@web/lib/trpc.types";
+import { useQuery } from "@tanstack/react-query";
+
+type ChatData = NonNullable<RouterOutput["getChatById"]>;
+type Message = ChatData["messages"][number];
+type Reaction = Message["reactions"][number];
 
 type ChatMessageProps = ChatMessageType & {
   chatId: string;
@@ -40,6 +46,8 @@ export const ChatMessage = ({
 }: ChatMessageProps) => {
   const trpc = useTRPC();
   const { socket } = useSocket();
+  const queryClient = useQueryClient();
+  const { data: profile } = useQuery(trpc.profile.queryOptions());
   const reactMutation = useMutation(trpc.reactMessage.mutationOptions());
   const [showReactionBar, setShowReactionBar] = useState(false);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
@@ -66,26 +74,83 @@ export const ChatMessage = ({
   };
 
   const handleReactionClick = async (emoji: string) => {
+    let previousChat: ChatData | undefined = undefined;
     try {
+      // Optimistically update the UI
+      previousChat =
+        queryClient.getQueryData<ChatData>(
+          trpc.getChatById.queryKey({ chatId })
+        ) || undefined;
+
+      if (previousChat) {
+        queryClient.setQueryData<ChatData>(
+          trpc.getChatById.queryKey({ chatId }),
+          (old) => {
+            if (!old) return old;
+            return {
+              ...old,
+              messages: old.messages.map((message) => {
+                if (message.id !== id) return message;
+
+                // Check if user already reacted with this emoji
+                const existingReaction = message.reactions.find(
+                  (r) => r.emoji === emoji && r.user.id === profile?.id
+                );
+
+                if (existingReaction) {
+                  // Remove reaction if it exists
+                  return {
+                    ...message,
+                    reactions: message.reactions.filter(
+                      (r) => r.emoji !== emoji || r.user.id !== profile?.id
+                    ),
+                  };
+                }
+
+                // Add new reaction
+                return {
+                  ...message,
+                  reactions: [
+                    ...message.reactions,
+                    {
+                      emoji,
+                      user: {
+                        id: profile?.id || "",
+                        name: profile?.name || "",
+                      },
+                    } as Reaction,
+                  ],
+                };
+              }),
+            };
+          }
+        );
+      }
+
+      // Perform the actual mutation
       await reactMutation.mutateAsync({
         emoji,
         messageId: id,
       });
 
       if (socket?.connected) {
-        console.log("Emitting reaction event");
         socket.emit("reaction", {
           messageId: id,
           emoji,
           chatId,
         });
-      } else {
-        console.error("Socket not connected");
       }
 
       setShowReactionBar(false);
     } catch (error) {
       console.error("Error adding reaction:", error);
+      // Revert optimistic update on error
+      if (previousChat) {
+        queryClient.setQueryData<ChatData>(
+          trpc.getChatById.queryKey({ chatId }),
+          previousChat
+        );
+      }
     }
   };
 
@@ -121,10 +186,15 @@ export const ChatMessage = ({
         </Avatar>
       )}
       {!showAvatar && <div className="w-8" />}
-      <div className="flex flex-col max-w-[80%] relative">
+      <div
+        className={cn(
+          "flex flex-col max-w-[80%] relative",
+          isCurrentUser ? "items-end" : "items-start"
+        )}
+      >
         <div
           className={cn(
-            "relative px-4 py-2 select-none touch-none",
+            "relative max-w-fit px-4 py-2 select-none touch-none",
             getBorderRadiusClass(isCurrentUser, messagePosition),
             isEmojiOnly
               ? "bg-transparent"
@@ -179,7 +249,7 @@ export const ChatMessage = ({
 
           <p
             className={cn(
-              "break-words",
+              "break-words ",
               isEmojiOnly ? "text-4xl leading-none" : "text-sm",
               isCurrentUser ? "text-right" : "text-left"
             )}
@@ -204,15 +274,15 @@ export const ChatMessage = ({
               />
             </div>
           )}
-          {showTime && (
-            <p className="text-xs mt-1 text-gray-500 flex-shrink-0">
-              {new Date(createdAt).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </p>
-          )}
         </div>
+        {showTime && (
+          <p className="text-xs mt-1 text-gray-500 flex-shrink-0">
+            {new Date(createdAt).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </p>
+        )}
       </div>
     </div>
   );
