@@ -1,14 +1,11 @@
-# Start with a base image
-FROM alpine:latest
+# Use the official coturn image from Docker Hub
+FROM coturn/coturn
 
-# Install coturn
-RUN apk update && apk add coturn
-
-# Copy the custom turnserver.conf file (optional)
+# Copy your custom turnserver.conf into the Docker container
 COPY turnserver.conf /etc/turnserver.conf
 
-# Expose ports for STUN and TURN
+# Expose the necessary ports for TURN/STUN
 EXPOSE 3478 5349 49152-65535
 
-# Run the coturn server
+# Set the default command to run the coturn server with the configuration file
 ENTRYPOINT ["turnserver", "-c", "/etc/turnserver.conf", "--no-cli"]
