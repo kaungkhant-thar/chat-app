@@ -35,8 +35,8 @@ export const MessageReactions = ({
   return (
     <div
       className={cn(
-        "absolute -bottom-3 flex flex-nowrap gap-1 z-10",
-        isCurrentUser ? "right-0" : "left-0"
+        "flex flex-nowrap gap-1",
+        isCurrentUser ? "flex-row-reverse" : "flex-row"
       )}
       onMouseEnter={(e) => {
         e.stopPropagation();

@@ -15,8 +15,11 @@ import {
   isEmojiOnlyMessage,
 } from "./utils";
 import { useSocket } from "@web/context/socket.context";
-import { Dialog, DialogContent, DialogTitle } from "@web/components/ui/dialog";
-import { VisuallyHidden } from "@web/components/ui/visually-hidden";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@web/components/ui/popover";
 import Picker from "@emoji-mart/react";
 import data from "@emoji-mart/data";
 
@@ -35,7 +38,6 @@ export const ChatMessage = ({
   reactions,
   chatId,
 }: ChatMessageProps) => {
-  console.log({ content });
   const trpc = useTRPC();
   const { socket } = useSocket();
   const reactMutation = useMutation(trpc.reactMessage.mutationOptions());
@@ -44,6 +46,7 @@ export const ChatMessage = ({
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(
     null
   );
+  console.log({ isEmojiPickerOpen });
 
   const handleTouchStart = useCallback(() => {
     const timer = setTimeout(() => {
@@ -70,7 +73,6 @@ export const ChatMessage = ({
         messageId: id,
       });
 
-      // Emit socket event for real-time updates
       if (socket?.connected) {
         console.log("Emitting reaction event");
         socket.emit("reaction", {
@@ -120,69 +122,98 @@ export const ChatMessage = ({
         </Avatar>
       )}
       {!showAvatar && <div className="w-8" />}
-      <div
-        className={cn(
-          "relative my-0.5 max-w-[80%] px-4 py-2 select-none touch-none",
-          getBorderRadiusClass(isCurrentUser, messagePosition),
-          isEmojiOnly
-            ? ""
-            : isCurrentUser
-            ? "bg-blue-500 text-white"
-            : "bg-gray-200 text-gray-900",
-          !showTime && "py-1.5",
-          reactions.length > 0 && "mb-5",
-          isEmojiOnly && "!px-3 !py-1"
-        )}
-        onMouseEnter={() => setShowReactionBar(true)}
-        onMouseLeave={() => setShowReactionBar(false)}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-        onTouchMove={handleTouchEnd}
-        onContextMenu={handleContextMenu}
-      >
-        {showReactionBar && (
-          <ReactionBar
-            onReactionClick={handleReactionClick}
-            onMoreClick={handleMoreClick}
-            isCurrentUser={isCurrentUser}
-          />
-        )}
-        <Dialog open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
-          <DialogTitle>
-            <VisuallyHidden>Emoji Picker</VisuallyHidden>
-          </DialogTitle>
-          <DialogContent className="p-0 border rounded-lg shadow-lg w-[340px]">
-            <Picker
-              data={data}
-              onEmojiSelect={handleEmojiSelect}
-              theme="light"
-              previewPosition="none"
-              maxFrequentRows={1}
-            />
-          </DialogContent>
-        </Dialog>
-        <p
+      <div className="flex flex-col max-w-[80%] relative">
+        <div
           className={cn(
-            "break-words",
-            isEmojiOnly ? "text-4xl leading-none" : "text-sm"
+            "relative px-4 py-2 select-none touch-none",
+            getBorderRadiusClass(isCurrentUser, messagePosition),
+            isEmojiOnly
+              ? "bg-transparent"
+              : isCurrentUser
+              ? "bg-blue-500 text-white"
+              : "bg-gray-200 text-gray-900",
+            !showTime && "py-1.5",
+            isEmojiOnly && "!px-3 !py-1"
+          )}
+          onMouseEnter={() => setShowReactionBar(true)}
+          onMouseLeave={() => {
+            setShowReactionBar(false);
+            setIsEmojiPickerOpen(false);
+          }}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          onTouchMove={handleTouchEnd}
+          onContextMenu={handleContextMenu}
+        >
+          {showReactionBar && (
+            <Popover open={isEmojiPickerOpen}>
+              <PopoverTrigger asChild>
+                <div
+                  className={cn(
+                    "absolute -top-0",
+                    isCurrentUser ? "right-0" : "left-0"
+                  )}
+                >
+                  <ReactionBar
+                    onReactionClick={handleReactionClick}
+                    onMoreClick={handleMoreClick}
+                    isCurrentUser={isCurrentUser}
+                  />
+                </div>
+              </PopoverTrigger>
+              <PopoverContent
+                className="w-[340px] p-0 border rounded-lg shadow-lg"
+                side="top"
+                align={isCurrentUser ? "end" : "start"}
+                sideOffset={5}
+              >
+                <Picker
+                  data={data}
+                  onEmojiSelect={handleEmojiSelect}
+                  theme="light"
+                  previewPosition="none"
+                  maxFrequentRows={1}
+                />
+              </PopoverContent>
+            </Popover>
+          )}
+
+          <p
+            className={cn(
+              "break-words",
+              isEmojiOnly ? "text-4xl leading-none" : "text-sm",
+              isCurrentUser ? "text-right" : "text-left"
+            )}
+          >
+            {content}
+          </p>
+        </div>
+
+        <div
+          className={cn(
+            "flex items-center gap-2 -mt-1 relative z-10 mb-1",
+            isCurrentUser ? "flex-row-reverse" : "flex-row"
           )}
         >
-          {content}
-        </p>
-        {showTime && (
-          <p className="mt-1 text-xs opacity-50">
-            {new Date(createdAt).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </p>
-        )}
-        <MessageReactions
-          reactions={reactions}
-          isCurrentUser={isCurrentUser}
-          onReactionClick={handleReactionClick}
-          setShowReactionBar={setShowReactionBar}
-        />
+          {reactions.length > 0 && (
+            <div className="flex items-center">
+              <MessageReactions
+                reactions={reactions}
+                isCurrentUser={isCurrentUser}
+                onReactionClick={handleReactionClick}
+                setShowReactionBar={setShowReactionBar}
+              />
+            </div>
+          )}
+          {showTime && (
+            <p className="text-xs mt-1 text-gray-500 flex-shrink-0">
+              {new Date(createdAt).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );

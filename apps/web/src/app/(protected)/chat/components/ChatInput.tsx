@@ -13,13 +13,11 @@ import { Button } from "@web/components/ui/button";
 import { useSocket } from "@web/context/socket.context";
 import { type ChatInputProps } from "./types";
 
-// Shadcn Dialog
 import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogTrigger,
-} from "@web/components/ui/dialog";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@web/components/ui/popover";
 
 import Picker from "@emoji-mart/react";
 import data from "@emoji-mart/data";
@@ -33,6 +31,7 @@ export const ChatInput = ({
 }: ChatInputProps) => {
   const [message, setMessage] = useState("");
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const { socket } = useSocket();
 
   const emitTyping = useCallback(() => {
@@ -50,6 +49,12 @@ export const ChatInput = ({
     onSendMessage(message);
     setMessage("");
     emitStopTyping();
+  };
+
+  const handleEmojiSelect = (emoji: any) => {
+    setMessage((prev) => prev + emoji.native);
+    // Focus back on input after emoji selection
+    inputRef.current?.focus();
   };
 
   useEffect(() => {
@@ -72,6 +77,7 @@ export const ChatInput = ({
     >
       <div className="relative flex-1">
         <Textarea
+          ref={inputRef}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder="Type a message..."
@@ -84,11 +90,8 @@ export const ChatInput = ({
           }}
         />
 
-        <Dialog open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
-          <DialogTitle>
-            <VisuallyHidden>Emoji Picker</VisuallyHidden>
-          </DialogTitle>
-          <DialogTrigger asChild>
+        <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
+          <PopoverTrigger asChild>
             <Button
               type="button"
               size="icon"
@@ -97,20 +100,22 @@ export const ChatInput = ({
             >
               <SmileIcon className="h-5 w-5 text-muted-foreground hover:text-foreground transition-colors" />
             </Button>
-          </DialogTrigger>
-
-          <DialogContent className="p-0 border rounded-lg shadow-lg w-[340px]">
+          </PopoverTrigger>
+          <PopoverContent
+            className="w-[340px] p-0 border rounded-lg shadow-lg"
+            side="top"
+            align="end"
+            sideOffset={5}
+          >
             <Picker
               data={data}
-              onEmojiSelect={(emoji: any) => {
-                setMessage((prev) => prev + emoji.native);
-              }}
+              onEmojiSelect={handleEmojiSelect}
               theme="light"
               previewPosition="none"
               maxFrequentRows={1}
             />
-          </DialogContent>
-        </Dialog>
+          </PopoverContent>
+        </Popover>
       </div>
 
       <Button

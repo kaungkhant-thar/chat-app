@@ -14,7 +14,7 @@ export const MessageList = ({
 
   useEffect(() => {
     messageStartRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages.length]);
 
   if (!messages.length) {
     return <EmptyChat />;
@@ -74,7 +74,7 @@ export const MessageList = ({
   });
 
   return (
-    <div className="flex flex-1 flex-col overflow-y-auto p-4">
+    <div className="flex flex-1 gap-1 flex-col overflow-y-auto p-4">
       {elements}
       <div ref={messageStartRef} />
     </div>
