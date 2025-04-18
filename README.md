@@ -95,7 +95,7 @@ docker-compose up
 ## 📚 Tech Stack
 
 - **Frontend**: React with TypeScript
-- **Backend**: Node.js with TypeScript
+- **Backend**: Nest.js with TypeScript
 - **Database**: PostgreSQL with Prisma ORM
 - **Real-time Communication**: WebRTC with Coturn
 - **Package Manager**: pnpm
