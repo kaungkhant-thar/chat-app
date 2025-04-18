@@ -1,17 +1,33 @@
-import { type AppRouter } from "@server/trpc/trpc.router";
-import { type ChatMessage as APIChatMessage } from "@shared/schemas";
+import { type RouterOutput } from "@web/lib/trpc.types";
 
-type ChatData = NonNullable<AppRouter["getChat"]["_def"]["$types"]["output"]>;
-type Message = APIChatMessage;
+type ChatData = NonNullable<RouterOutput["getChatById"]>;
+type Message = ChatData["messages"][number];
 
-export type ChatMessage = Message & {
+export type User = {
+  id: string;
+  name: string;
+};
+
+export type Reaction = {
+  emoji: string;
+  user: User;
+};
+
+export type ChatMessage = {
+  id: string;
+  content: string;
   isCurrentUser?: boolean;
-  showAvatar?: boolean;
-  messagePosition?: "single" | "first" | "middle" | "last";
-  sender: {
-    id: string;
-    name: string;
-  };
+  showAvatar: boolean;
+  messagePosition: "single" | "first" | "middle" | "last";
+  createdAt: string;
+  sender: User;
+  reactions: Reaction[];
+};
+
+export type ReactionCount = {
+  emoji: string;
+  count: number;
+  users: User[];
 };
 
 export type DateSeparatorProps = {
@@ -21,6 +37,7 @@ export type DateSeparatorProps = {
 export type MessageListProps = {
   messages: Message[];
   currentUserId: string;
+  chatId: string;
 };
 
 export type ChatInputProps = {

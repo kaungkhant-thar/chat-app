@@ -141,6 +141,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: SocketWithUser,
     @MessageBody() data: TypingEvent,
   ) {
+    console.log('received typing event', data, this.users);
     const fromUserId = client.data.userId;
     const { toUserId, chatId } = data;
     const targetSocketId = this.users.get(toUserId);
@@ -167,6 +168,22 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.to(targetSocketId).emit('stop-typing', {
       fromUserId,
       chatId,
+    });
+  }
+
+  @SubscribeMessage('reaction')
+  handleReaction(
+    @ConnectedSocket() client: SocketWithUser,
+    @MessageBody() data: { messageId: string; emoji: string; chatId: string },
+  ) {
+    const fromUserId = client.data.userId;
+    const { messageId, emoji, chatId } = data;
+
+    // Broadcast the reaction to all users in the chat
+    this.server.emit(`chat:${chatId}:reaction`, {
+      messageId,
+      emoji,
+      userId: fromUserId,
     });
   }
 }

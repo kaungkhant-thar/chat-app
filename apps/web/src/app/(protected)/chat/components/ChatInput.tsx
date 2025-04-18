@@ -1,15 +1,27 @@
-import { SendHorizontal } from "lucide-react";
+"use client";
+
 import {
   useState,
-  type FormEvent,
-  type KeyboardEvent,
   useEffect,
   useCallback,
+  useRef,
+  type FormEvent,
 } from "react";
-import { type ChatInputProps } from "./types";
+import { SendHorizontal, SmileIcon } from "lucide-react";
 import { Textarea } from "@web/components/ui/textarea";
 import { Button } from "@web/components/ui/button";
 import { useSocket } from "@web/context/socket.context";
+import { type ChatInputProps } from "./types";
+
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@web/components/ui/popover";
+
+import Picker from "@emoji-mart/react";
+import data from "@emoji-mart/data";
+import { VisuallyHidden } from "@web/components/ui/visually-hidden";
 
 export const ChatInput = ({
   onSendMessage,
@@ -18,16 +30,16 @@ export const ChatInput = ({
   toUserId,
 }: ChatInputProps) => {
   const [message, setMessage] = useState("");
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const { socket } = useSocket();
 
   const emitTyping = useCallback(() => {
-    if (!socket) return;
-    socket.emit("typing", { chatId, toUserId });
+    socket?.emit("typing", { chatId, toUserId });
   }, [socket, chatId, toUserId]);
 
   const emitStopTyping = useCallback(() => {
-    if (!socket) return;
-    socket.emit("stop-typing", { chatId, toUserId });
+    socket?.emit("stop-typing", { chatId, toUserId });
   }, [socket, chatId, toUserId]);
 
   const handleSubmit = (e: FormEvent) => {
@@ -39,7 +51,12 @@ export const ChatInput = ({
     emitStopTyping();
   };
 
-  // Debounced typing effect
+  const handleEmojiSelect = (emoji: any) => {
+    setMessage((prev) => prev + emoji.native);
+    // Focus back on input after emoji selection
+    inputRef.current?.focus();
+  };
+
   useEffect(() => {
     let typingTimer: NodeJS.Timeout;
 
@@ -58,20 +75,57 @@ export const ChatInput = ({
       onSubmit={handleSubmit}
       className="flex w-full items-center gap-2 border-t bg-background p-4"
     >
-      <Textarea
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
-        placeholder="Type a message..."
-        className="min-h-[40px] max-h-[120px] resize-none"
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            handleSubmit(e);
-          }
-        }}
-      />
-      <Button type="submit" size="icon" disabled={isLoading || !message.trim()}>
-        <SendHorizontal className="h-4 w-4" />
+      <div className="relative flex-1">
+        <Textarea
+          ref={inputRef}
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder="Type a message..."
+          className="min-h-[40px] max-h-[120px] pr-12 resize-none"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSubmit(e);
+            }
+          }}
+        />
+
+        <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="absolute right-2 top-1/2 -translate-y-1/2 hover:bg-transparent"
+            >
+              <SmileIcon className="h-5 w-5 text-muted-foreground hover:text-foreground transition-colors" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            className="w-[340px] p-0 border rounded-lg shadow-lg"
+            side="top"
+            align="end"
+            sideOffset={5}
+          >
+            <Picker
+              data={data}
+              onEmojiSelect={handleEmojiSelect}
+              theme="light"
+              previewPosition="none"
+              maxFrequentRows={1}
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      <Button
+        type="submit"
+        size="icon"
+        variant="ghost"
+        className="hover:bg-transparent"
+        disabled={isLoading || !message.trim()}
+      >
+        <SendHorizontal className="h-5 w-5 text-muted-foreground hover:text-foreground transition-colors" />
       </Button>
     </form>
   );

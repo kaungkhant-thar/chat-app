@@ -10,43 +10,36 @@ import { useEffect } from "react";
 import { ChatInput } from "../components/ChatInput";
 import { MessageList } from "../components/MessageList";
 import UserIsTyping from "../components/UserIsTyping";
+import { useChatReactions } from "@web/hooks/use-chat-reactions";
 
-type SendMessageVariables = {
-  chatId: string;
-  content: string;
-};
-
-const Page = () => {
+const ChatPage = () => {
   const params = useParams<{ id: string }>();
-  const userId = params.id;
+  const chatId = params.id;
   const trpc = useTRPC();
-
   const { socket } = useSocket();
   const queryClient = useQueryClient();
 
   const { data: profile } = useQuery(trpc.profile.queryOptions());
   const { data: chat, refetch } = useQuery(
-    trpc.getChat.queryOptions({
-      userIds: [userId],
-    })
+    trpc.getChatById.queryOptions({ chatId })
   );
+
+  useChatReactions(chat?.id || "");
 
   const createChatMutation = useMutation(trpc.createChat.mutationOptions());
   const sendMessageMutation = useMutation({
     ...trpc.sendMessage.mutationOptions(),
-    onMutate: async (newMessage: SendMessageVariables) => {
+    onMutate: async (newMessage) => {
       await queryClient.cancelQueries({
-        queryKey: trpc.getChat.queryKey({
-          userIds: [userId],
-        }),
+        queryKey: trpc.getChatById.queryKey({ chatId: newMessage.chatId }),
       });
 
       const previousChat = queryClient.getQueryData<ChatType>(
-        trpc.getChat.queryKey({ userIds: [userId] })
+        trpc.getChatById.queryKey({ chatId: newMessage.chatId })
       );
 
       queryClient.setQueryData(
-        trpc.getChat.queryKey({ userIds: [userId] }),
+        trpc.getChatById.queryKey({ chatId: newMessage.chatId }),
         (old) => {
           if (!old) return null;
           return {
@@ -59,8 +52,12 @@ const Page = () => {
                 senderId: profile?.id || "",
                 sender: {
                   id: profile?.id || "",
+                  email: profile?.email || "",
                   name: profile?.name || "",
+                  password: "",
+                  createdAt: new Date().toISOString(),
                 },
+                reactions: [],
                 chatId: newMessage.chatId,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
@@ -77,14 +74,14 @@ const Page = () => {
       const previousChat = queryClient.getQueryData<ChatType>(["previousChat"]);
       if (previousChat) {
         queryClient.setQueryData<ChatType | null>(
-          trpc.getChat.queryKey({ userIds: [userId] }),
+          trpc.getChatById.queryKey({ chatId: previousChat.id }),
           previousChat
         );
       }
     },
     onSettled: () => {
       queryClient.invalidateQueries({
-        queryKey: trpc.getChat.queryKey({ userIds: [userId] }),
+        queryKey: trpc.getChatById.queryKey({ chatId: chat?.id || "" }),
       });
     },
   });
@@ -95,6 +92,7 @@ const Page = () => {
       chatId: chat.id,
       content,
     });
+    refetch();
   };
 
   useEffect(() => {
@@ -103,9 +101,7 @@ const Page = () => {
     const handleMessage = (message: ChatMessage) => {
       console.log("received message", message);
       queryClient.setQueryData(
-        trpc.getChat.queryKey({
-          userIds: [userId],
-        }),
+        trpc.getChatById.queryKey({ chatId: message.chatId }),
         (oldData) => {
           if (!oldData) return null;
 
@@ -114,7 +110,11 @@ const Page = () => {
             sender: {
               id: message.senderId,
               name: message.sender?.name || "Unknown",
+              email: "",
+              password: "",
+              createdAt: new Date().toISOString(),
             },
+            reactions: [],
           };
 
           const messageExists = oldData.messages.some(
@@ -154,18 +154,25 @@ const Page = () => {
   }, [socket]);
 
   if (!profile) return null;
+  const otherUserId = chat?.users.find((user) => user.user.id !== profile.id)
+    ?.user.id;
 
   return (
     <div className="flex flex-col h-full">
       {chat ? (
         <>
-          <MessageList messages={chat.messages} currentUserId={profile.id} />
-          <UserIsTyping userId={userId} chatId={chat.id} />
+          <MessageList
+            messages={chat.messages}
+            currentUserId={profile.id}
+            chatId={chat.id}
+          />
+          <UserIsTyping userId={otherUserId || ""} chatId={chat.id} />
+
           <ChatInput
             onSendMessage={handleSendMessage}
             isLoading={sendMessageMutation.isPending}
             chatId={chat.id}
-            toUserId={userId}
+            toUserId={otherUserId || ""}
           />
         </>
       ) : (
@@ -176,7 +183,7 @@ const Page = () => {
               loading={createChatMutation.isPending}
               onClick={async () => {
                 await createChatMutation.mutateAsync({
-                  userIds: [userId],
+                  userIds: [otherUserId || ""],
                 });
                 refetch();
               }}
@@ -192,4 +199,4 @@ const Page = () => {
   );
 };
 
-export default Page;
+export default ChatPage;
