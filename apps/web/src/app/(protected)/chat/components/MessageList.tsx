@@ -23,6 +23,7 @@ export const MessageList = ({
   const elements: React.ReactNode[] = [];
   let lastDate = "";
 
+  // Sort messages by creation time
   const sortedMessages = [...messages].sort(
     (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
   );
@@ -44,13 +45,30 @@ export const MessageList = ({
       lastDate = currentDate;
     }
 
-    const showAvatar =
-      !prevMessage || prevMessage.senderId !== message.senderId;
-    const nextMessageFromSameSender =
-      nextMessage?.senderId === message.senderId;
-    const prevMessageFromSameSender =
-      prevMessage?.senderId === message.senderId;
+    // Check if messages are from the same sender AND within a reasonable time window
+    const isWithinTimeThreshold = (msg1: any, msg2: any) => {
+      if (!msg1 || !msg2) return false;
+      const time1 = new Date(msg1.createdAt).getTime();
+      const time2 = new Date(msg2.createdAt).getTime();
+      // Messages sent within 5 minutes are considered part of the same group
+      return Math.abs(time1 - time2) < 1000 * 60 * 5;
+    };
 
+    // Determine if this message is part of a sequence
+    const nextMessageFromSameSender =
+      nextMessage &&
+      nextMessage.senderId === message.senderId &&
+      isWithinTimeThreshold(message, nextMessage);
+
+    const prevMessageFromSameSender =
+      prevMessage &&
+      prevMessage.senderId === message.senderId &&
+      isWithinTimeThreshold(message, prevMessage);
+
+    // Show avatar for the first message in a sequence
+    const showAvatar = !prevMessageFromSameSender;
+
+    // Determine message position in the sequence
     let messagePosition: "single" | "first" | "middle" | "last" = "single";
 
     if (prevMessageFromSameSender && nextMessageFromSameSender) {
