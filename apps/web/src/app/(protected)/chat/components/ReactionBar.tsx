@@ -45,7 +45,7 @@ export const ReactionBar = ({
       <Button
         variant="ghost"
         size="icon"
-        className="h-6 w-6 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+        className="h-6 w-6 rounded-full text-primary hover:bg-gray-100 dark:hover:bg-gray-700"
         onClick={onMoreClick}
       >
         <Plus className="h-3 w-3" />
