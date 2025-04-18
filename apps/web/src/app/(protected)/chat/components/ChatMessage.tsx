@@ -46,7 +46,6 @@ export const ChatMessage = ({
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(
     null
   );
-  console.log({ isEmojiPickerOpen });
 
   const handleTouchStart = useCallback(() => {
     const timer = setTimeout(() => {
