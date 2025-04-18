@@ -2,6 +2,7 @@ import { protectedProcedure, router } from '@server/trpc/trpc';
 import {
   CreateChatSchema,
   GetChatSchema,
+  ReactionSchema,
   SendMessageSchema,
 } from '@shared/schemas';
 
@@ -29,5 +30,12 @@ export const chatsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.id;
       return ctx.appContext.getChatsService().sendMessage(input, userId);
+    }),
+
+  reactMessage: protectedProcedure
+    .input(ReactionSchema)
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      return ctx.appContext.getChatsService().reactToMessage(input, userId);
     }),
 });

@@ -1,17 +1,12 @@
-import { type AppRouter } from "@server/trpc/trpc.router";
-import { type ChatMessage as APIChatMessage } from "@shared/schemas";
+import { type RouterOutput } from "@web/lib/trpc.types";
 
-type ChatData = NonNullable<AppRouter["getChat"]["_def"]["$types"]["output"]>;
-type Message = APIChatMessage;
+type ChatData = NonNullable<RouterOutput["getChat"]>;
+type Message = ChatData["messages"][number];
 
 export type ChatMessage = Message & {
   isCurrentUser?: boolean;
   showAvatar?: boolean;
   messagePosition?: "single" | "first" | "middle" | "last";
-  sender: {
-    id: string;
-    name: string;
-  };
 };
 
 export type DateSeparatorProps = {

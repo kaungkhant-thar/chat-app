@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { ChatGateway } from './chat.gateway';
-import { SendMessageInput } from '@shared/schemas';
+import { ReactionInput, SendMessageInput } from '@shared/schemas';
 
 @Injectable()
 export class ChatsService {
@@ -23,11 +23,25 @@ export class ChatsService {
       },
       include: {
         messages: {
+          take: 20,
+          orderBy: {
+            createdAt: 'desc',
+          },
           include: {
             sender: {
               select: {
                 name: true,
                 id: true,
+              },
+            },
+            reactions: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
               },
             },
           },
@@ -75,6 +89,33 @@ export class ChatsService {
       if (socketId) {
         this.chatGateway.server.to(socketId).emit('message', message);
       }
+    });
+  }
+
+  async reactToMessage({ messageId, emoji }: ReactionInput, userId: string) {
+    const existingReaction = await this.prismaService.reaction.findFirst({
+      where: {
+        messageId,
+        userId,
+        emoji,
+      },
+    });
+
+    if (existingReaction) {
+      await this.prismaService.reaction.delete({
+        where: {
+          id: existingReaction.id,
+        },
+      });
+      return;
+    }
+
+    await this.prismaService.reaction.create({
+      data: {
+        emoji,
+        messageId,
+        userId,
+      },
     });
   }
 }

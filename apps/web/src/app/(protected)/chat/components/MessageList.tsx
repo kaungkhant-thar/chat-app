@@ -6,28 +6,36 @@ import { useRef, useEffect } from "react";
 import { ChatMessage } from "./ChatMessage";
 
 export const MessageList = ({ messages, currentUserId }: MessageListProps) => {
-  const messageEndRef = useRef<HTMLDivElement>(null);
+  const messageStartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    // For flex-col-reverse, we scroll to top for new messages
+    messageStartRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   if (!messages.length) {
     return <EmptyChat />;
   }
-
+  console.log({ messages });
   const elements: React.ReactNode[] = [];
   let lastDate = "";
 
-  messages.forEach((message, index) => {
+  [...messages].reverse().forEach((message, index) => {
     const messageDate = new Date(message.createdAt);
     const currentDate = messageDate.toLocaleDateString();
-    const nextMessage = messages[index + 1];
-    const prevMessage = messages[index - 1];
+
+    const nextMessage = index > 0 ? messages[messages.length - index] : null;
+    const prevMessage =
+      index < messages.length - 1
+        ? messages[messages.length - index - 2]
+        : null;
 
     if (currentDate !== lastDate) {
       elements.push(
-        <DateSeparator key={`date-${currentDate}`} date={currentDate} />
+        <DateSeparator
+          key={`date-${currentDate}-${messages.length - index - 1}`}
+          date={messageDate.toISOString()}
+        />
       );
       lastDate = currentDate;
     }
@@ -77,7 +85,7 @@ export const MessageList = ({ messages, currentUserId }: MessageListProps) => {
   return (
     <div className="flex flex-1 flex-col overflow-y-auto p-4">
       {elements}
-      <div ref={messageEndRef} />
+      <div ref={messageStartRef} />
     </div>
   );
 };

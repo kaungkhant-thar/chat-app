@@ -61,6 +61,7 @@ const Page = () => {
                   id: profile?.id || "",
                   name: profile?.name || "",
                 },
+                reactions: [],
                 chatId: newMessage.chatId,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
@@ -115,6 +116,7 @@ const Page = () => {
               id: message.senderId,
               name: message.sender?.name || "Unknown",
             },
+            reactions: [],
           };
 
           const messageExists = oldData.messages.some(
@@ -161,6 +163,7 @@ const Page = () => {
         <>
           <MessageList messages={chat.messages} currentUserId={profile.id} />
           <UserIsTyping userId={userId} chatId={chat.id} />
+
           <ChatInput
             onSendMessage={handleSendMessage}
             isLoading={sendMessageMutation.isPending}

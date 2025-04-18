@@ -33,3 +33,10 @@ export const ChatMessageSchema = z.object({
 });
 
 export type ChatMessage = z.infer<typeof ChatMessageSchema>;
+
+export const ReactionSchema = z.object({
+  messageId: z.string().uuid(),
+  emoji: z.string(),
+});
+
+export type ReactionInput = z.infer<typeof ReactionSchema>;
