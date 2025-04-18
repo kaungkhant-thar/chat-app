@@ -1,7 +1,7 @@
 {
   "extends": "../../tsconfig.json", // Extend the config options from the root,
   "compilerOptions": {
-    "target": "es5",
+    "target": "es6",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "strict": true,

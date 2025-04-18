@@ -21,7 +21,6 @@ import {
 
 import Picker from "@emoji-mart/react";
 import data from "@emoji-mart/data";
-import { VisuallyHidden } from "@web/components/ui/visually-hidden";
 
 export const ChatInput = ({
   onSendMessage,
@@ -52,9 +51,9 @@ export const ChatInput = ({
   };
 
   const handleEmojiSelect = (emoji: any) => {
-    setMessage((prev) => prev + emoji.native);
-    // Focus back on input after emoji selection
     inputRef.current?.focus();
+    setIsEmojiPickerOpen(true);
+    setMessage((prev) => prev + emoji.native);
   };
 
   useEffect(() => {

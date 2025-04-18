@@ -3,18 +3,13 @@ import { useSocket } from "@web/context/socket.context";
 import { PeerConnectionConfig } from "./types/webrtc";
 
 const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
-  { urls: "stun:stun.l.google.com:19302" },
-  { urls: "stun:stun1.l.google.com:19302" },
-  { urls: "stun:stun2.l.google.com:19302" },
   {
-    urls: "turn:openrelay.metered.ca:80",
-    username: "openrelayproject",
-    credential: "openrelayproject",
+    urls: `stun:${process.env.NEXT_PUBLIC_TURN_URL}:3478`,
   },
   {
-    urls: "turn:openrelay.metered.ca:443",
-    username: "openrelayproject",
-    credential: "openrelayproject",
+    urls: `turn:${process.env.NEXT_PUBLIC_TURN_URL}:3478`,
+    username: process.env.NEXT_PUBLIC_TURN_USERNAME,
+    credential: process.env.NEXT_PUBLIC_TURN_PASSWORD,
   },
 ];
 
