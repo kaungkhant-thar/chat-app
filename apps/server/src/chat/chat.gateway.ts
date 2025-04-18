@@ -169,4 +169,21 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       chatId,
     });
   }
+
+  @SubscribeMessage('reaction')
+  handleReaction(
+    @ConnectedSocket() client: SocketWithUser,
+    @MessageBody() data: { messageId: string; emoji: string; chatId: string },
+  ) {
+    console.log('receiving reaction event', data);
+    const fromUserId = client.data.userId;
+    const { messageId, emoji, chatId } = data;
+
+    // Broadcast the reaction to all users in the chat
+    this.server.emit(`chat:${chatId}:reaction`, {
+      messageId,
+      emoji,
+      userId: fromUserId,
+    });
+  }
 }

@@ -7,10 +7,15 @@ export const CreateChatSchema = z.object({
 export type CreateChatInput = z.infer<typeof CreateChatSchema>;
 
 export const GetChatSchema = z.object({
-  userIds: z.array(z.string().uuid()).min(1),
+  userIds: z.array(z.string()),
+});
+
+export const GetChatByIdSchema = z.object({
+  chatId: z.string(),
 });
 
 export type GetChatInput = z.infer<typeof GetChatSchema>;
+export type GetChatByIdInput = z.infer<typeof GetChatByIdSchema>;
 
 export const SendMessageSchema = z.object({
   chatId: z.string().uuid(),
@@ -34,9 +39,9 @@ export const ChatMessageSchema = z.object({
 
 export type ChatMessage = z.infer<typeof ChatMessageSchema>;
 
-export const ReactionSchema = z.object({
+export const ReactToMessageSchema = z.object({
   messageId: z.string().uuid(),
   emoji: z.string(),
 });
 
-export type ReactionInput = z.infer<typeof ReactionSchema>;
+export type ReactToMessageInput = z.infer<typeof ReactToMessageSchema>;

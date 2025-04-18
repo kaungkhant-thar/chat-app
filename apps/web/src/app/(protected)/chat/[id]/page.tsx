@@ -10,6 +10,7 @@ import { useEffect } from "react";
 import { ChatInput } from "../components/ChatInput";
 import { MessageList } from "../components/MessageList";
 import UserIsTyping from "../components/UserIsTyping";
+import { useChatReactions } from "@web/hooks/use-chat-reactions";
 
 type SendMessageVariables = {
   chatId: string;
@@ -18,7 +19,7 @@ type SendMessageVariables = {
 
 const Page = () => {
   const params = useParams<{ id: string }>();
-  const userId = params.id;
+  const chatId = params.id;
   const trpc = useTRPC();
 
   const { socket } = useSocket();
@@ -26,27 +27,27 @@ const Page = () => {
 
   const { data: profile } = useQuery(trpc.profile.queryOptions());
   const { data: chat, refetch } = useQuery(
-    trpc.getChat.queryOptions({
-      userIds: [userId],
+    trpc.getChatById.queryOptions({
+      chatId,
     })
   );
+
+  // useChatReactions(chat?.id || "");
 
   const createChatMutation = useMutation(trpc.createChat.mutationOptions());
   const sendMessageMutation = useMutation({
     ...trpc.sendMessage.mutationOptions(),
     onMutate: async (newMessage: SendMessageVariables) => {
       await queryClient.cancelQueries({
-        queryKey: trpc.getChat.queryKey({
-          userIds: [userId],
-        }),
+        queryKey: trpc.getChatById.queryKey({ chatId: newMessage.chatId }),
       });
 
       const previousChat = queryClient.getQueryData<ChatType>(
-        trpc.getChat.queryKey({ userIds: [userId] })
+        trpc.getChatById.queryKey({ chatId: newMessage.chatId })
       );
 
       queryClient.setQueryData(
-        trpc.getChat.queryKey({ userIds: [userId] }),
+        trpc.getChatById.queryKey({ chatId: newMessage.chatId }),
         (old) => {
           if (!old) return null;
           return {
@@ -78,14 +79,14 @@ const Page = () => {
       const previousChat = queryClient.getQueryData<ChatType>(["previousChat"]);
       if (previousChat) {
         queryClient.setQueryData<ChatType | null>(
-          trpc.getChat.queryKey({ userIds: [userId] }),
+          trpc.getChatById.queryKey({ chatId: previousChat.id }),
           previousChat
         );
       }
     },
     onSettled: () => {
       queryClient.invalidateQueries({
-        queryKey: trpc.getChat.queryKey({ userIds: [userId] }),
+        queryKey: trpc.getChatById.queryKey({ chatId: chat?.id || "" }),
       });
     },
   });
@@ -104,9 +105,7 @@ const Page = () => {
     const handleMessage = (message: ChatMessage) => {
       console.log("received message", message);
       queryClient.setQueryData(
-        trpc.getChat.queryKey({
-          userIds: [userId],
-        }),
+        trpc.getChatById.queryKey({ chatId: message.chatId }),
         (oldData) => {
           if (!oldData) return null;
 
@@ -161,14 +160,18 @@ const Page = () => {
     <div className="flex flex-col h-full">
       {chat ? (
         <>
-          <MessageList messages={chat.messages} currentUserId={profile.id} />
-          <UserIsTyping userId={userId} chatId={chat.id} />
+          <MessageList
+            messages={chat.messages}
+            currentUserId={profile.id}
+            chatId={chat.id}
+          />
+          <UserIsTyping userId={"2"} chatId={chat.id} />
 
           <ChatInput
             onSendMessage={handleSendMessage}
             isLoading={sendMessageMutation.isPending}
             chatId={chat.id}
-            toUserId={userId}
+            toUserId={"2"}
           />
         </>
       ) : (
@@ -179,7 +182,7 @@ const Page = () => {
               loading={createChatMutation.isPending}
               onClick={async () => {
                 await createChatMutation.mutateAsync({
-                  userIds: [userId],
+                  userIds: ["2"],
                 });
                 refetch();
               }}

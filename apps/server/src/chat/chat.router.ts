@@ -2,8 +2,9 @@ import { protectedProcedure, router } from '@server/trpc/trpc';
 import {
   CreateChatSchema,
   GetChatSchema,
-  ReactionSchema,
+  GetChatByIdSchema,
   SendMessageSchema,
+  ReactToMessageSchema,
 } from '@shared/schemas';
 
 export const chatsRouter = router({
@@ -15,6 +16,11 @@ export const chatsRouter = router({
       return ctx.appContext.getChatsService().createChat([userId, ...userIds]);
     }),
 
+  getChats: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.user.id;
+    return ctx.appContext.getChatsService().getChats(userId);
+  }),
+
   getChat: protectedProcedure
     .input(GetChatSchema)
     .query(async ({ ctx, input }) => {
@@ -25,6 +31,13 @@ export const chatsRouter = router({
         .getChatByUsersIds([userId, ...userIds]);
     }),
 
+  getChatById: protectedProcedure
+    .input(GetChatByIdSchema)
+    .query(async ({ ctx, input }) => {
+      const { chatId } = input;
+      return ctx.appContext.getChatsService().getChatById(chatId);
+    }),
+
   sendMessage: protectedProcedure
     .input(SendMessageSchema)
     .mutation(async ({ ctx, input }) => {
@@ -33,7 +46,14 @@ export const chatsRouter = router({
     }),
 
   reactMessage: protectedProcedure
-    .input(ReactionSchema)
+    .input(ReactToMessageSchema)
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.user.id;
+      return ctx.appContext.getChatsService().reactToMessage(input, userId);
+    }),
+
+  reactToMessage: protectedProcedure
+    .input(ReactToMessageSchema)
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.id;
       return ctx.appContext.getChatsService().reactToMessage(input, userId);

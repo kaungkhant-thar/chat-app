@@ -1,12 +1,33 @@
 import { type RouterOutput } from "@web/lib/trpc.types";
 
-type ChatData = NonNullable<RouterOutput["getChat"]>;
+type ChatData = NonNullable<RouterOutput["getChatById"]>;
 type Message = ChatData["messages"][number];
 
-export type ChatMessage = Message & {
+export type User = {
+  id: string;
+  name: string;
+};
+
+export type Reaction = {
+  emoji: string;
+  user: User;
+};
+
+export type ChatMessage = {
+  id: string;
+  content: string;
   isCurrentUser?: boolean;
-  showAvatar?: boolean;
-  messagePosition?: "single" | "first" | "middle" | "last";
+  showAvatar: boolean;
+  messagePosition: "single" | "first" | "middle" | "last";
+  createdAt: string;
+  sender: User;
+  reactions: Reaction[];
+};
+
+export type ReactionCount = {
+  emoji: string;
+  count: number;
+  users: User[];
 };
 
 export type DateSeparatorProps = {
@@ -16,6 +37,7 @@ export type DateSeparatorProps = {
 export type MessageListProps = {
   messages: Message[];
   currentUserId: string;
+  chatId: string;
 };
 
 export type ChatInputProps = {

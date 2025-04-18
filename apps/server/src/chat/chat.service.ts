@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { ChatGateway } from './chat.gateway';
-import { ReactionInput, SendMessageInput } from '@shared/schemas';
+import { ReactToMessageInput, SendMessageInput } from '@shared/schemas';
 
 @Injectable()
 export class ChatsService {
@@ -51,6 +51,56 @@ export class ChatsService {
     return chat;
   }
 
+  async getChats(userId: string) {
+    const chats = await this.prismaService.chat.findMany({
+      where: {
+        users: {
+          some: { userId },
+        },
+      },
+      include: {
+        messages: {
+          take: 1,
+          orderBy: {
+            createdAt: 'desc',
+          },
+        },
+        users: {
+          select: {
+            user: true,
+          },
+        },
+      },
+    });
+    return chats;
+  }
+
+  async getChatById(chatId: string) {
+    const chat = await this.prismaService.chat.findUnique({
+      where: {
+        id: chatId,
+      },
+      include: {
+        messages: {
+          include: {
+            sender: true,
+            reactions: {
+              include: {
+                user: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
+        users: true,
+      },
+    });
+
+    return chat;
+  }
+
   async createChat(userIds: string[]) {
     const chat = await this.prismaService.chat.create({
       data: {},
@@ -92,7 +142,10 @@ export class ChatsService {
     });
   }
 
-  async reactToMessage({ messageId, emoji }: ReactionInput, userId: string) {
+  async reactToMessage(
+    { messageId, emoji }: ReactToMessageInput,
+    userId: string,
+  ) {
     const existingReaction = await this.prismaService.reaction.findFirst({
       where: {
         messageId,

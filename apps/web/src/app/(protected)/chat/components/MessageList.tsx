@@ -5,7 +5,11 @@ import { EmptyChat } from "./EmptyChat";
 import { useRef, useEffect } from "react";
 import { ChatMessage } from "./ChatMessage";
 
-export const MessageList = ({ messages, currentUserId }: MessageListProps) => {
+export const MessageList = ({
+  messages,
+  currentUserId,
+  chatId,
+}: MessageListProps) => {
   const messageStartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -16,7 +20,7 @@ export const MessageList = ({ messages, currentUserId }: MessageListProps) => {
   if (!messages.length) {
     return <EmptyChat />;
   }
-  console.log({ messages });
+
   const elements: React.ReactNode[] = [];
   let lastDate = "";
 
@@ -78,6 +82,7 @@ export const MessageList = ({ messages, currentUserId }: MessageListProps) => {
         isCurrentUser={message.senderId === currentUserId}
         showAvatar={showAvatar}
         messagePosition={messagePosition}
+        chatId={chatId}
       />
     );
   });
