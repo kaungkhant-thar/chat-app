@@ -1,12 +1,11 @@
 # Chat Application
 
-A modern, real-time chat application built with a monorepo architecture. This application features both web and server components, with WebRTC support for real-time communication.
+A modern, real-time chat application with WebRTC support for real-time communication.
 
 ## 🚀 Features
 
 - Real-time messaging
 - WebRTC support for peer-to-peer communication
-- Monorepo architecture with pnpm workspaces
 - TypeScript for type safety
 - Prisma for database management
 - Docker support for containerization
@@ -15,10 +14,13 @@ A modern, real-time chat application built with a monorepo architecture. This ap
 
 ```
 chat-app/
-├── apps/           # Frontend and backend applications
-├── libs/           # Shared libraries and utilities
-├── services/       # Additional services (including coturn for WebRTC)
-└── schemas/        # Shared type definitions and schemas
+├── libs/
+│   └── shared-schemas/    # Shared type definitions and schemas
+├── services/             # Additional services (including coturn)
+├── package.json         # Root package configuration
+├── pnpm-workspace.yaml  # Workspace configuration
+├── tsconfig.json       # TypeScript configuration
+└── Docker-compose.yaml # Docker configuration
 ```
 
 ## 🛠️ Prerequisites
