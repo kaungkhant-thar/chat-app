@@ -66,15 +66,27 @@ export class ChatsService {
           },
         },
         users: {
-          select: {
-            user: true,
+          include: {
+            user: {
+              omit: {
+                password: true,
+              },
+              include: {
+                userPresence: {
+                  select: {
+                    status: true,
+                    updatedAt: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
     });
+
     return chats;
   }
-
   async getChatById(chatId: string) {
     const chat = await this.prismaService.chat.findUnique({
       where: {
@@ -97,7 +109,19 @@ export class ChatsService {
         },
         users: {
           select: {
-            user: true,
+            user: {
+              omit: {
+                password: true,
+              },
+              include: {
+                userPresence: {
+                  select: {
+                    status: true,
+                    updatedAt: true,
+                  },
+                },
+              },
+            },
           },
         },
       },

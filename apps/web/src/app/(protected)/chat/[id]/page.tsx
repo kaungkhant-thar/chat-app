@@ -95,6 +95,9 @@ const ChatPage = () => {
       chatId: chat.id,
       content,
     });
+    queryClient.invalidateQueries({
+      queryKey: trpc.getChats.queryKey(),
+    });
     refetch();
   };
 
