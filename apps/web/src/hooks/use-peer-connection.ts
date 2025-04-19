@@ -4,12 +4,9 @@ import { PeerConnectionConfig } from "./types/webrtc";
 
 const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
   {
-    urls: `stun:${process.env.NEXT_PUBLIC_TURN_URL}:3478`,
-  },
-  {
-    urls: `turn:${process.env.NEXT_PUBLIC_TURN_URL}:3478`,
-    username: process.env.NEXT_PUBLIC_TURN_USERNAME,
-    credential: process.env.NEXT_PUBLIC_TURN_PASSWORD,
+    urls: ["turn:54.234.137.27:3478"],
+    username: "testuser",
+    credential: "testpassword",
   },
 ];
 
