@@ -177,7 +177,7 @@ const ChatPage = () => {
     ?.user.id;
 
   return (
-    <div className="flex flex-col h-full max-h-[calc(100vh-80px)]">
+    <div className="flex flex-col h-full max-h-[calc(100vh-120px)] lg:max-h-full">
       {chat ? (
         <>
           <MessageList
