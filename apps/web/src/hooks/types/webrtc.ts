@@ -19,6 +19,7 @@ export type PeerConnectionConfig = {
   iceServers: RTCIceServer[];
   iceCandidatePoolSize?: number;
   iceTransportPolicy?: "all" | "relay";
-  bundlePolicy?: "balanced" | "max-compat" | "max-bundle";
-  rtcpMuxPolicy?: "require";
+  bundlePolicy?: RTCBundlePolicy;
+  rtcpMuxPolicy?: RTCRtcpMuxPolicy;
+  sdpSemantics?: "unified-plan" | "plan-b";
 };
