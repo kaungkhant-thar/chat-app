@@ -4,6 +4,15 @@ import { PeerConnectionConfig } from "./types/webrtc";
 
 const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
   {
+    urls: [
+      "stun:stun.l.google.com:19302",
+      "stun:stun1.l.google.com:19302",
+      "stun:stun2.l.google.com:19302",
+      "stun:stun3.l.google.com:19302",
+      "stun:stun4.l.google.com:19302",
+    ],
+  },
+  {
     urls: ["turn:54.234.137.27:3478"],
     username: "testuser",
     credential: "testpassword",
@@ -16,9 +25,10 @@ export const usePeerConnection = (
   config: PeerConnectionConfig = {
     iceServers: DEFAULT_ICE_SERVERS,
     iceCandidatePoolSize: 10,
-    iceTransportPolicy: "all",
+    iceTransportPolicy: "all" as const,
     bundlePolicy: "max-bundle",
     rtcpMuxPolicy: "require" as const,
+    sdpSemantics: "unified-plan" as const,
   }
 ) => {
   const { socket } = useSocket();
