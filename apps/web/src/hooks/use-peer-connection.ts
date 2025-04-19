@@ -1,8 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useSocket } from "@web/context/socket.context";
 import { PeerConnectionConfig } from "./types/webrtc";
+import { useQuery } from "@tanstack/react-query";
 
-// Fetch TURN credentials from Metered
 const fetchTurnCredentials = async () => {
   try {
     const response = await fetch(
@@ -22,40 +22,12 @@ const fetchTurnCredentials = async () => {
 
 const MAX_RECONNECT_ATTEMPTS = 3;
 
-export const usePeerConnection = (
-  config: PeerConnectionConfig = {
-    iceServers: [
-      {
-        urls: "stun:stun.relay.metered.ca:80",
-      },
-      {
-        urls: "turn:global.relay.metered.ca:80",
-        username: "a24922f0982216581dd5fbe6",
-        credential: "BDxsqhe/DENoZ9eh",
-      },
-      {
-        urls: "turn:global.relay.metered.ca:80?transport=tcp",
-        username: "a24922f0982216581dd5fbe6",
-        credential: "BDxsqhe/DENoZ9eh",
-      },
-      {
-        urls: "turn:global.relay.metered.ca:443",
-        username: "a24922f0982216581dd5fbe6",
-        credential: "BDxsqhe/DENoZ9eh",
-      },
-      {
-        urls: "turns:global.relay.metered.ca:443?transport=tcp",
-        username: "a24922f0982216581dd5fbe6",
-        credential: "BDxsqhe/DENoZ9eh",
-      },
-    ],
-    iceCandidatePoolSize: 10,
-    iceTransportPolicy: "all" as const,
-    bundlePolicy: "max-bundle",
-    rtcpMuxPolicy: "require" as const,
-  }
-) => {
+export const usePeerConnection = () => {
   const { socket } = useSocket();
+  const { data: iceServers } = useQuery({
+    queryKey: ["iceServers"],
+    queryFn: fetchTurnCredentials,
+  });
 
   // State management
   const [peerConnection, setPeerConnection] =
@@ -230,7 +202,7 @@ export const usePeerConnection = (
   const createPeerConnection = useCallback(() => {
     try {
       const pc = new RTCPeerConnection({
-        ...config,
+        ...iceServers,
       });
       setupPeerConnectionListeners(pc);
       setPeerConnection(pc);
@@ -240,7 +212,7 @@ export const usePeerConnection = (
       setError(err as Error);
       return null;
     }
-  }, [config, setupPeerConnectionListeners]);
+  }, [iceServers, setupPeerConnectionListeners]);
 
   const addIceCandidate = useCallback(
     async (candidate: RTCIceCandidate) => {
