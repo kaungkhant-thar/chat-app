@@ -24,25 +24,38 @@ const MAX_RECONNECT_ATTEMPTS = 3;
 
 export const usePeerConnection = (
   config: PeerConnectionConfig = {
-    iceServers: [], // Will be populated with Metered credentials
+    iceServers: [
+      {
+        urls: "stun:stun.relay.metered.ca:80",
+      },
+      {
+        urls: "turn:global.relay.metered.ca:80",
+        username: "a24922f0982216581dd5fbe6",
+        credential: "BDxsqhe/DENoZ9eh",
+      },
+      {
+        urls: "turn:global.relay.metered.ca:80?transport=tcp",
+        username: "a24922f0982216581dd5fbe6",
+        credential: "BDxsqhe/DENoZ9eh",
+      },
+      {
+        urls: "turn:global.relay.metered.ca:443",
+        username: "a24922f0982216581dd5fbe6",
+        credential: "BDxsqhe/DENoZ9eh",
+      },
+      {
+        urls: "turns:global.relay.metered.ca:443?transport=tcp",
+        username: "a24922f0982216581dd5fbe6",
+        credential: "BDxsqhe/DENoZ9eh",
+      },
+    ],
     iceCandidatePoolSize: 10,
     iceTransportPolicy: "all" as const,
     bundlePolicy: "max-bundle",
     rtcpMuxPolicy: "require" as const,
-    sdpSemantics: "unified-plan" as const,
   }
 ) => {
   const { socket } = useSocket();
-  const [iceServers, setIceServers] = useState<RTCIceServer[]>([]);
-  console.log({ iceServers });
-
-  // Fetch TURN credentials when component mounts
-  useEffect(() => {
-    fetchTurnCredentials().then((servers) => {
-      setIceServers(servers);
-      config.iceServers = servers;
-    });
-  }, []);
 
   // State management
   const [peerConnection, setPeerConnection] =
@@ -110,26 +123,53 @@ export const usePeerConnection = (
           connectionState: pc.connectionState,
           iceConnectionState: pc.iceConnectionState,
           iceGatheringState: pc.iceGatheringState,
+          signalingState: pc.signalingState,
         });
+
+        if (pc.connectionState === "failed") {
+          console.log("Connection failed, attempting reconnection...");
+          // Close the existing connection
+          pc.close();
+          // Create a new connection after a short delay
+          setTimeout(() => {
+            if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
+              console.log("Attempting reconnection...");
+              reconnectAttemptsRef.current++;
+              createPeerConnection();
+            } else {
+              console.log("Max reconnection attempts reached");
+              setError(
+                new Error(
+                  "Failed to establish connection after multiple attempts"
+                )
+              );
+            }
+          }, 1000);
+        }
         handleConnectionStateChange(pc);
       };
 
       pc.oniceconnectionstatechange = () => {
-        console.log("ICE connection state changed:", pc.iceConnectionState);
+        console.log("ICE connection state changed:", {
+          state: pc.iceConnectionState,
+          gatheringState: pc.iceGatheringState,
+        });
         setIceConnectionState(pc.iceConnectionState);
-        if (pc.iceConnectionState === "failed") {
-          setError(new Error("ICE connection failed"));
+
+        if (pc.iceConnectionState === "disconnected") {
+          console.log("ICE disconnected, checking connection...");
+          // Give it some time to recover naturally
+          setTimeout(() => {
+            if (pc.iceConnectionState === "disconnected") {
+              console.log("ICE still disconnected, attempting restart...");
+              pc.restartIce();
+            }
+          }, 3000);
         }
       };
 
-      pc.onicecandidateerror = (event) => {
-        console.error("ICE candidate error:", {
-          errorCode: event.errorCode,
-          errorText: event.errorText,
-          url: event.url,
-          address: event.address,
-          port: event.port,
-        });
+      pc.onicegatheringstatechange = () => {
+        console.log("ICE gathering state:", pc.iceGatheringState);
       };
 
       pc.onicecandidate = (event) => {
@@ -147,6 +187,16 @@ export const usePeerConnection = (
             });
           }
         }
+      };
+
+      pc.onicecandidateerror = (event) => {
+        console.error("ICE candidate error:", {
+          errorCode: event.errorCode,
+          errorText: event.errorText,
+          url: event.url,
+          address: event.address,
+          port: event.port,
+        });
       };
 
       pc.onsignalingstatechange = () => {
@@ -181,17 +231,6 @@ export const usePeerConnection = (
     try {
       const pc = new RTCPeerConnection({
         ...config,
-        iceServers:
-          iceServers.length > 0
-            ? iceServers
-            : [
-                {
-                  urls: [
-                    "stun:stun.l.google.com:19302",
-                    "stun:stun1.l.google.com:19302",
-                  ],
-                },
-              ],
       });
       setupPeerConnectionListeners(pc);
       setPeerConnection(pc);
@@ -201,7 +240,7 @@ export const usePeerConnection = (
       setError(err as Error);
       return null;
     }
-  }, [config, iceServers, setupPeerConnectionListeners]);
+  }, [config, setupPeerConnectionListeners]);
 
   const addIceCandidate = useCallback(
     async (candidate: RTCIceCandidate) => {
