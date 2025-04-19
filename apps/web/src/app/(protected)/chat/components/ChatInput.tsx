@@ -80,7 +80,7 @@ export const ChatInput = ({
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder="Type a message..."
-          className="min-h-[40px] max-h-[120px] pr-12 resize-none"
+          className="min-h-[40px] max-h-[60px] pr-12 resize-none"
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();

@@ -28,6 +28,7 @@ export const usePeerConnection = () => {
     queryKey: ["iceServers"],
     queryFn: fetchTurnCredentials,
   });
+  console.log({ iceServers });
 
   // State management
   const [peerConnection, setPeerConnection] =
@@ -202,7 +203,7 @@ export const usePeerConnection = () => {
   const createPeerConnection = useCallback(() => {
     try {
       const pc = new RTCPeerConnection({
-        ...iceServers,
+        iceServers: iceServers || [],
       });
       setupPeerConnectionListeners(pc);
       setPeerConnection(pc);
