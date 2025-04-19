@@ -204,6 +204,7 @@ export const usePeerConnection = () => {
     try {
       const pc = new RTCPeerConnection({
         iceServers: iceServers || [],
+        iceTransportPolicy: "relay",
       });
       setupPeerConnectionListeners(pc);
       setPeerConnection(pc);
