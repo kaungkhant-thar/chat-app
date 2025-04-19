@@ -2,29 +2,29 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { useSocket } from "@web/context/socket.context";
 import { PeerConnectionConfig } from "./types/webrtc";
 
-const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
-  {
-    urls: [
-      "stun:stun.l.google.com:19302",
-      "stun:stun1.l.google.com:19302",
-      "stun:54.234.137.27:3478",
-    ],
-  },
-  {
-    urls: [
-      "turn:54.234.137.27:3478?transport=udp",
-      "turn:54.234.137.27:3478?transport=tcp",
-    ],
-    username: "testuser",
-    credential: "testpassword",
-  },
-];
+// Fetch TURN credentials from Metered
+const fetchTurnCredentials = async () => {
+  try {
+    const response = await fetch(
+      `https://kkt.metered.live/api/v1/turn/credentials?apiKey=${process.env.NEXT_PUBLIC_METERED_API_KEY}`
+    );
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching TURN credentials:", error);
+    // Fallback to Google STUN servers if Metered fails
+    return [
+      {
+        urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"],
+      },
+    ];
+  }
+};
 
 const MAX_RECONNECT_ATTEMPTS = 3;
 
 export const usePeerConnection = (
   config: PeerConnectionConfig = {
-    iceServers: DEFAULT_ICE_SERVERS,
+    iceServers: [], // Will be populated with Metered credentials
     iceCandidatePoolSize: 10,
     iceTransportPolicy: "all" as const,
     bundlePolicy: "max-bundle",
@@ -33,6 +33,16 @@ export const usePeerConnection = (
   }
 ) => {
   const { socket } = useSocket();
+  const [iceServers, setIceServers] = useState<RTCIceServer[]>([]);
+  console.log({ iceServers });
+
+  // Fetch TURN credentials when component mounts
+  useEffect(() => {
+    fetchTurnCredentials().then((servers) => {
+      setIceServers(servers);
+      config.iceServers = servers;
+    });
+  }, []);
 
   // State management
   const [peerConnection, setPeerConnection] =
@@ -169,7 +179,20 @@ export const usePeerConnection = (
 
   const createPeerConnection = useCallback(() => {
     try {
-      const pc = new RTCPeerConnection(config);
+      const pc = new RTCPeerConnection({
+        ...config,
+        iceServers:
+          iceServers.length > 0
+            ? iceServers
+            : [
+                {
+                  urls: [
+                    "stun:stun.l.google.com:19302",
+                    "stun:stun1.l.google.com:19302",
+                  ],
+                },
+              ],
+      });
       setupPeerConnectionListeners(pc);
       setPeerConnection(pc);
       return pc;
@@ -178,7 +201,7 @@ export const usePeerConnection = (
       setError(err as Error);
       return null;
     }
-  }, [config, setupPeerConnectionListeners]);
+  }, [config, iceServers, setupPeerConnectionListeners]);
 
   const addIceCandidate = useCallback(
     async (candidate: RTCIceCandidate) => {
