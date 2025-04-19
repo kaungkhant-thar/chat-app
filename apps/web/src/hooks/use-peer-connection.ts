@@ -4,11 +4,11 @@ import { PeerConnectionConfig } from "./types/webrtc";
 
 const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
   {
-    urls: `stun:${process.env.NEXT_PUBLIC_TURN_URL}:3478`,
-  },
-  {
-    urls: `turn:${process.env.NEXT_PUBLIC_TURN_URL}:3478`,
-    username: process.env.NEXT_PUBLIC_TURN_USERNAME,
+    urls: [
+      "turn:switchyard.proxy.rlwy.net:17375?transport=tcp", // Proxied TCP
+      "turns:switchyard.proxy.rlwy.net:17375", // Proxied TLS
+    ],
+    username: process.env.NEXT_PUBLIC_TURN_USERNAME, // Must match turnserver.conf
     credential: process.env.NEXT_PUBLIC_TURN_PASSWORD,
   },
 ];
