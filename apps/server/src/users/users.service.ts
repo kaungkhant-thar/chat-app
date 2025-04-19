@@ -12,6 +12,14 @@ export class UsersService {
           not: userId,
         },
       },
+      include: {
+        userPresence: {
+          select: {
+            status: true,
+            updatedAt: true,
+          },
+        },
+      },
     });
 
     return users;
@@ -22,7 +30,33 @@ export class UsersService {
       where: {
         id: userId,
       },
+      omit: {
+        password: true,
+      },
+      include: {
+        userPresence: {
+          select: {
+            status: true,
+            updatedAt: true,
+          },
+        },
+      },
     });
     return user;
+  }
+
+  async updateUserStatus(userId: string, status: string) {
+    await this.prismaService.userPresence.upsert({
+      where: {
+        userId,
+      },
+      update: {
+        status,
+      },
+      create: {
+        userId,
+        status,
+      },
+    });
   }
 }

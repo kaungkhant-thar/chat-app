@@ -11,9 +11,13 @@ export const MessageList = ({
   chatId,
 }: MessageListProps) => {
   const messageStartRef = useRef<HTMLDivElement>(null);
+  const isInitialLoadRef = useRef(true);
 
   useEffect(() => {
-    messageStartRef.current?.scrollIntoView({ behavior: "smooth" });
+    messageStartRef.current?.scrollIntoView({
+      behavior: isInitialLoadRef.current ? "auto" : "smooth",
+    });
+    isInitialLoadRef.current = false;
   }, [messages.length]);
 
   if (!messages.length) {
@@ -23,7 +27,6 @@ export const MessageList = ({
   const elements: React.ReactNode[] = [];
   let lastDate = "";
 
-  // Sort messages by creation time
   const sortedMessages = [...messages].sort(
     (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
   );

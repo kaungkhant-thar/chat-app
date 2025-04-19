@@ -8,6 +8,7 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { AuthService } from '@server/auth/auth.service';
+import { UsersService } from '@server/users/users.service';
 import { Server, Socket } from 'socket.io';
 
 type TypingEvent = {
@@ -35,7 +36,10 @@ type SocketWithUser = Socket & {
   },
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly usersService: UsersService,
+  ) {}
 
   @WebSocketServer()
   server: Server;
@@ -57,14 +61,24 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     client.data.userId = payload.userId;
+    await this.usersService.updateUserStatus(payload.userId, 'online');
+    client.broadcast.emit('user-status', {
+      userId: payload.userId,
+      status: 'online',
+    });
     this.users.set(payload.userId, client.id);
   }
 
-  handleDisconnect(@ConnectedSocket() client: SocketWithUser) {
+  async handleDisconnect(@ConnectedSocket() client: SocketWithUser) {
     const userId = client.data.userId;
     if (userId) {
       this.users.delete(userId);
     }
+    await this.usersService.updateUserStatus(userId, 'offline');
+    client.broadcast.emit('user-status', {
+      userId,
+      status: 'offline',
+    });
     client.disconnect();
   }
 
