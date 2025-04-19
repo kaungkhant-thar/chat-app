@@ -7,13 +7,14 @@ const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
     urls: [
       "stun:stun.l.google.com:19302",
       "stun:stun1.l.google.com:19302",
-      "stun:stun2.l.google.com:19302",
-      "stun:stun3.l.google.com:19302",
-      "stun:stun4.l.google.com:19302",
+      "stun:54.234.137.27:3478",
     ],
   },
   {
-    urls: ["turn:54.234.137.27:3478"],
+    urls: [
+      "turn:54.234.137.27:3478?transport=udp",
+      "turn:54.234.137.27:3478?transport=tcp",
+    ],
     username: "testuser",
     credential: "testpassword",
   },
@@ -94,26 +95,52 @@ export const usePeerConnection = (
 
   const setupPeerConnectionListeners = useCallback(
     (pc: RTCPeerConnection) => {
-      pc.onconnectionstatechange = () => handleConnectionStateChange(pc);
+      pc.onconnectionstatechange = () => {
+        console.log("Connection state changed:", {
+          connectionState: pc.connectionState,
+          iceConnectionState: pc.iceConnectionState,
+          iceGatheringState: pc.iceGatheringState,
+        });
+        handleConnectionStateChange(pc);
+      };
 
       pc.oniceconnectionstatechange = () => {
+        console.log("ICE connection state changed:", pc.iceConnectionState);
         setIceConnectionState(pc.iceConnectionState);
         if (pc.iceConnectionState === "failed") {
           setError(new Error("ICE connection failed"));
         }
       };
 
-      pc.onsignalingstatechange = () => {
-        setSignalingState(pc.signalingState);
+      pc.onicecandidateerror = (event) => {
+        console.error("ICE candidate error:", {
+          errorCode: event.errorCode,
+          errorText: event.errorText,
+          url: event.url,
+          address: event.address,
+          port: event.port,
+        });
       };
 
       pc.onicecandidate = (event) => {
-        if (event.candidate && socket?.connected) {
-          socket.emit("webrtc-ice-candidate", {
-            toUserId: toUserIdRef.current,
-            candidate: event.candidate,
+        if (event.candidate) {
+          console.log("New ICE candidate:", {
+            type: event.candidate.type,
+            protocol: event.candidate.protocol,
+            address: event.candidate.address,
+            port: event.candidate.port,
           });
+          if (socket?.connected) {
+            socket.emit("webrtc-ice-candidate", {
+              toUserId: toUserIdRef.current,
+              candidate: event.candidate,
+            });
+          }
         }
+      };
+
+      pc.onsignalingstatechange = () => {
+        setSignalingState(pc.signalingState);
       };
 
       pc.ontrack = (event) => {
