@@ -138,6 +138,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: SocketWithUser,
     @MessageBody() data: CallEvent,
   ) {
+    console.log('received ice candidate event', data);
     const fromUserId = client.data.userId;
     const { candidate, toUserId } = data;
 
