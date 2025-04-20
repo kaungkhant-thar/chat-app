@@ -27,7 +27,7 @@ type SignUpFormValues = z.infer<typeof loginSchema>;
 const SignUpForm = () => {
   const trpc = useTRPC();
   const { token, isAuthenticated, setToken } = useAuthStore();
-  console.log({ token, isAuthenticated });
+
   const router = useRouter();
 
   const form = useForm<SignUpFormValues>({

@@ -9,37 +9,12 @@ export const useMediaStream = (
 
   const startStream = useCallback(async () => {
     try {
-      // First try to get the stream with ideal constraints
       const constraints = {
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-        video: config.video
-          ? {
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
-              frameRate: { ideal: 30 },
-              facingMode: "user",
-            }
-          : false,
+        audio: true,
+        video: true,
       };
 
-      console.log("Requesting media stream with constraints:", constraints);
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
-
-      // Log stream details for debugging
-      console.log("Media stream obtained:", {
-        tracks: stream.getTracks().map((track) => ({
-          kind: track.kind,
-          id: track.id,
-          enabled: track.enabled,
-          muted: track.muted,
-          readyState: track.readyState,
-          constraints: track.getConstraints(),
-        })),
-      });
 
       // Set up track event listeners
       stream.getTracks().forEach((track) => {
@@ -93,13 +68,7 @@ export const useMediaStream = (
 
   const stopStream = useCallback(() => {
     if (localStream) {
-      console.log("Stopping media stream");
       localStream.getTracks().forEach((track) => {
-        console.log(`Stopping track: ${track.kind}`, {
-          id: track.id,
-          enabled: track.enabled,
-          readyState: track.readyState,
-        });
         track.stop();
       });
       setLocalStream(null);
@@ -114,10 +83,6 @@ export const useMediaStream = (
 
     const audioTracks = localStream.getAudioTracks();
     audioTracks.forEach((track) => {
-      console.log(`Toggling audio track ${track.id}:`, {
-        wasEnabled: track.enabled,
-        willBe: !track.enabled,
-      });
       track.enabled = !track.enabled;
     });
   }, [localStream]);

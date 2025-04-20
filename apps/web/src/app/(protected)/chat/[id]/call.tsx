@@ -7,6 +7,7 @@ import { useTRPC } from "@web/lib/trpc";
 import { Mic, MicOff, PhoneOff, User } from "lucide-react";
 import React, { useState } from "react";
 import { cn } from "@web/lib/utils";
+import { RemoteVideo } from "./remote-stream";
 
 type CallProps = {
   userId: string;
@@ -23,6 +24,7 @@ const Call = ({ userId, isAudioOnly = false, onEndCall }: CallProps) => {
     toggleMute,
     callState,
   } = useWebRTCContext();
+
   const trpc = useTRPC();
   const { data: user, isLoading } = useQuery(
     trpc.findUserById.queryOptions({ id: userId })
