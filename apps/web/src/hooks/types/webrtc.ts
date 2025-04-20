@@ -3,11 +3,7 @@ export type CallState = {
   isCallActive: boolean;
   isInitiator: boolean;
   type: "video" | "audio";
-  signalingState:
-    | "stable"
-    | "have-local-offer"
-    | "have-remote-offer"
-    | "closed";
+  signalingState: RTCSignalingState;
 };
 
 export type MediaStreamConfig = {
