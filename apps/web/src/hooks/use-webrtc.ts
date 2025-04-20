@@ -77,7 +77,7 @@ export const useWebRTC = () => {
     }: {
       candidate: RTCIceCandidateInit;
     }) => {
-      if (!candidate?.candidate.includes("typ relay")) return;
+      if (!candidate?.candidate?.includes("typ relay")) return;
 
       const rtcCandidate = new RTCIceCandidate(candidate);
       console.log("📥 Received TURN candidate:", rtcCandidate);
@@ -95,7 +95,7 @@ export const useWebRTC = () => {
     };
 
     const handleIncomingCall = (data: IncomingCall) => {
-      console.log("📞 Incoming call from", data.fromUserId);
+      console.log("📞 Incoming call from", data?.fromUserId);
       setIncomingCall(data);
     };
 
