@@ -1,4 +1,26 @@
 services:
+  server:
+    build:
+      context: .
+      target: server
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./apps/server/.env
+    environment:
+      - NODE=production
+  web:
+    build:
+      context: .
+      target: web
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./apps/web/.env
+    environment:
+      - NODE=production
+    depends_on:
+      - server
   postgres:
     image: postgres
     environment:

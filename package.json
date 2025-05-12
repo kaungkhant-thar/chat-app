@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "pnpm run --parallel dev",
-    "prebuild": " pnpm --filter=schemas  build ",
+    "prebuild": "pnpm --filter=@shared/schemas... build",
     "build:server": "pnpm run prebuild && pnpm --filter server build",
     "build:web": "pnpm run prebuild && pnpm --filter web build",
     "start:server": "pnpm --filter server start:prod",
