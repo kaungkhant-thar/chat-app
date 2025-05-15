@@ -36,8 +36,8 @@ resource "aws_ecs_task_definition" "server" {
       essential = true,
       portMappings = [{ containerPort = 4000 }],
       secrets = [
-        { name = "JWT_SECRET", valueFrom = aws_ssm_parameter.jwt_secret.arn },
-        { name = "DATABASE_URL", valueFrom = aws_ssm_parameter.database_url.arn }
+        { name = "JWT_SECRET", valueFrom = aws_ssm_parameter.jwt_secret.name },
+        { name = "DATABASE_URL", valueFrom = aws_ssm_parameter.database_url.name }
       ],
       environment = [{ name = "NODE_ENV", value = "production" }]
     }
