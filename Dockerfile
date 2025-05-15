@@ -66,7 +66,7 @@
     
     # Set production environment and expose port
     ENV NODE_ENV=production
-    EXPOSE 4000
+    EXPOSE 3001
     
     # Set working directory for the server and run the server app
     WORKDIR /app/apps/server
