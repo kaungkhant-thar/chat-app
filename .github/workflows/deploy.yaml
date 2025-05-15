@@ -1,0 +1,50 @@
+name: Build and Deploy to AWS
+
+on:
+  push:
+    branches:
+      - production
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & Push Web Image
+        run: |
+          docker build --target web -t ${{ secrets.AWS_ECR_WEB_REPO}} . 
+          docker push ${{ secrets.AWS_ECR_WEB_REPO}}
+
+      - name: Build & Push Server Image
+        run: |
+          docker build --target server -t ${{ secrets.AWS_ECR_SERVER_REPO}} . 
+          docker push ${{ secrets.AWS_ECR_SERVER_REPO}}
+
+      - name: Deploy Web to ECS
+        run: |
+          aws ecs update-service \
+              --cluster ${{ secrets.AWS_ECS_CLUSTER }} \
+              --service ${{ secrets.AWS_ECS_WEB_SERVICE }} \
+              --force-new-deployment \
+              --region ${{ secrets.AWS_REGION }} \
+              --desired-count 1
+      - name: Deploy Server to ECS
+        run: |
+          aws ecs update-service \
+              --cluster ${{ secrets.AWS_ECS_CLUSTER }} \
+              --service ${{ secrets.AWS_ECS_SERVER_SERVICE }} \
+              --force-new-deployment \
+              --region ${{ secrets.AWS_REGION }} \
+              --desired-count 1
