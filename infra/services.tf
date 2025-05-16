@@ -6,7 +6,7 @@ resource "aws_ecs_service" "web" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets          = data.aws_subnets.default.ids
+    subnets          = [aws_subnet.public_1.id, aws_subnet.public_2.id]
     security_groups  = [aws_security_group.ecs_sg.id]
     assign_public_ip = true
   }
@@ -26,7 +26,7 @@ resource "aws_ecs_service" "server" {
   }
 
   network_configuration {
-    subnets          = data.aws_subnets.default.ids
+    subnets          = [aws_subnet.public_1.id, aws_subnet.public_2.id]
     security_groups  = [aws_security_group.ecs_sg.id]
     assign_public_ip = true
   }
