@@ -35,11 +35,10 @@ resource "aws_ecs_task_definition" "server" {
       image     = "${aws_ecr_repository.server.repository_url}:latest",
       essential = true,
       portMappings = [{ containerPort = 4000 }],
-      secrets = [
-        { name = "JWT_SECRET", valueFrom = aws_ssm_parameter.jwt_secret.name },
-        { name = "DATABASE_URL", valueFrom = aws_ssm_parameter.database_url.name }
-      ],
-      environment = [{ name = "NODE_ENV", value = "production" }]
+     
+      environment = [{ name = "NODE_ENV", value = "production", },
+        { name = "JWT_SECRET", value = "Akssard!@#$5" },
+        { name = "DATABASE_URL", value = "postgresql://chat-app_owner:npg_mDaO6ysTkqU0@ep-sparkling-dream-a5wcy0lh-pooler.us-east-2.aws.neon.tech/chat-app?sslmode=require" }]
     }
   ])
 }

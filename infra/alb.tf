@@ -3,7 +3,7 @@ resource "aws_lb" "api" {
   name               = "${var.project_name}-api-alb"
   internal           = false
   load_balancer_type = "application"
-  subnets            = data.aws_subnets.default.ids
+  subnets            = [aws_subnet.public_1.id, aws_subnet.public_2.id]
   security_groups    = [aws_security_group.alb_sg.id]  # Attach ALB security group
 }
 
@@ -12,7 +12,7 @@ resource "aws_lb_target_group" "api" {
   name        = "${var.project_name}-api-tg"
   port        = 4000
   protocol    = "HTTP"
-  vpc_id      = data.aws_vpc.default.id
+  vpc_id      = aws_vpc.main.id
   target_type = "ip"
 
   health_check {
