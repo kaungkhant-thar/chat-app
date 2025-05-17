@@ -5,6 +5,12 @@ on:
     branches:
       - production
 
+env:
+  AWS_REGION: ap-southeast-1
+  ECR_WEB_REPO: chat-app-web
+  ECR_SERVER_REPO: chat-app-server
+  ECS_CLUSTER: chat-app-cluster
+  ECS_SERVICE: chat-app-service
 jobs:
   deploy:
     runs-on: ubuntu-latest
