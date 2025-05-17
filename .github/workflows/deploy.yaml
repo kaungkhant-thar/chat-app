@@ -41,19 +41,11 @@ jobs:
           docker build --target server -t ${{ secrets.AWS_ECR_SERVER_REPO}} . 
           docker push ${{ secrets.AWS_ECR_SERVER_REPO}}
 
-      - name: Deploy Web to ECS
+      - name: Deploy to ECS
         run: |
           aws ecs update-service \
               --cluster ${{ secrets.AWS_ECS_CLUSTER }} \
               --service ${{ secrets.AWS_ECS_WEB_SERVICE }} \
-              --force-new-deployment \
-              --region ${{ secrets.AWS_REGION }} \
-              --desired-count 1
-      - name: Deploy Server to ECS
-        run: |
-          aws ecs update-service \
-              --cluster ${{ secrets.AWS_ECS_CLUSTER }} \
-              --service ${{ secrets.AWS_ECS_SERVER_SERVICE }} \
               --force-new-deployment \
               --region ${{ secrets.AWS_REGION }} \
               --desired-count 1
