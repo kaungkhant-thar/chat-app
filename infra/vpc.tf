@@ -84,6 +84,15 @@ resource "aws_security_group_rule" "allow_http_80" {
   security_group_id = aws_security_group.alb_sg.id
 }
 
+resource "aws_security_group_rule" "alb_sg_egress_all" {
+  type              = "egress"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.alb_sg.id
+}
+
 # ECS Security Group
 resource "aws_security_group" "ecs_sg" {
   name        = "ecs_sg"
@@ -106,6 +115,16 @@ resource "aws_security_group_rule" "allow_http_3000" {
   from_port         = 3000
   to_port           = 3000
   protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.ecs_sg.id
+}
+
+
+resource "aws_security_group_rule" "ecs_sg_egress_all" {
+  type              = "egress"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
   cidr_blocks       = ["0.0.0.0/0"]
   security_group_id = aws_security_group.ecs_sg.id
 }
