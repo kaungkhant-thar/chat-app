@@ -1,5 +1,5 @@
 # ---------- Base Stage ----------
-    FROM node:slim AS base
+    FROM node:alpine AS base
 
     # Install pnpm globally
     RUN npm install -g pnpm
@@ -29,12 +29,19 @@
     RUN pnpm build:server && pnpm build:web
     
     # ---------- Web Output Stage ----------
-    FROM node:slim AS web
+    FROM node:alpine AS web
     
     WORKDIR /app
     
     # Install pnpm globally in the web stage
     RUN npm install -g pnpm
+
+    ARG NEXT_PUBLIC_API_URL
+    ARG NEXT_PUBLIC_METERED_API_KEY
+
+    ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+    ENV NEXT_PUBLIC_METERED_API_KEY=$NEXT_PUBLIC_METERED_API_KEY
+
     
     # Copy necessary files from the base stage
     COPY --from=base /app/package.json .
@@ -52,7 +59,7 @@
     CMD ["pnpm", "start"]
     
 
-    FROM node:slim AS server
+    FROM node:alpine AS server
 
     WORKDIR /app
     

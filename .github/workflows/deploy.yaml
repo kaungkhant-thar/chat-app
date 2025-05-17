@@ -24,9 +24,12 @@ jobs:
 
       - name: Build & Push Web Image
         run: |
-          docker build --target web -t ${{ secrets.AWS_ECR_WEB_REPO}} . 
+          docker build \
+            --target web \
+            --build-arg NEXT_PUBLIC_API_URL=https://${{ secrets.ALB_DNS_NAME }} \
+            --build-arg NEXT_PUBLIC_METERED_API_KEY=${{ secrets.METERED_API_KEY }} \
+            -t ${{ secrets.AWS_ECR_WEB_REPO}} .
           docker push ${{ secrets.AWS_ECR_WEB_REPO}}
-
       - name: Build & Push Server Image
         run: |
           docker build --target server -t ${{ secrets.AWS_ECR_SERVER_REPO}} . 
