@@ -1,4 +1,3 @@
-# main.tf - Complete Terraform Configuration for Chat App
 terraform {
   required_providers {
     aws = {
@@ -9,20 +8,19 @@ terraform {
 }
 
 provider "aws" {
-  region = "ap-southeast-1" # Change to your preferred region
+  region = "ap-southeast-1"
 }
 
+
+
 # --------------------------
-# Networking Configuration
+# Networking
 # --------------------------
 resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_support   = true
   enable_dns_hostnames = true
-
-  tags = {
-    Name = "chat-app-vpc"
-  }
+  tags = { Name = "chat-app-vpc" }
 }
 
 resource "aws_subnet" "public" {
@@ -31,31 +29,21 @@ resource "aws_subnet" "public" {
   cidr_block              = cidrsubnet(aws_vpc.main.cidr_block, 8, count.index)
   availability_zone       = element(["ap-southeast-1a", "ap-southeast-1b"], count.index)
   map_public_ip_on_launch = true
-
-  tags = {
-    Name = "public-subnet-${count.index}"
-  }
+  tags = { Name = "public-subnet-${count.index}" }
 }
 
 resource "aws_internet_gateway" "gw" {
   vpc_id = aws_vpc.main.id
-
-  tags = {
-    Name = "chat-app-igw"
-  }
+  tags = { Name = "chat-app-igw" }
 }
 
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
-
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.gw.id
   }
-
-  tags = {
-    Name = "public-rt"
-  }
+  tags = { Name = "public-rt" }
 }
 
 resource "aws_route_table_association" "public" {
@@ -67,24 +55,10 @@ resource "aws_route_table_association" "public" {
 # --------------------------
 # Security Groups
 # --------------------------
-resource "aws_security_group" "chat_app" {
-  name        = "chat-app-sg"
-  description = "Allow traffic for chat app"
+resource "aws_security_group" "alb_sg" {
+  name        = "chat-app-alb-sg"
+  description = "Allow HTTP traffic to ALB"
   vpc_id      = aws_vpc.main.id
-
-  ingress {
-    from_port   = 3000
-    to_port     = 3000
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 4000
-    to_port     = 4000
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
 
   ingress {
     from_port   = 80
@@ -100,25 +74,51 @@ resource "aws_security_group" "chat_app" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
-    Name = "chat-app-sg"
-  }
+  tags = { Name = "chat-app-alb-sg" }
 }
 
+resource "aws_security_group" "ecs_sg" {
+  name        = "chat-app-ecs-sg"
+  description = "Allow traffic from ALB to ECS tasks"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port       = 3000
+    to_port         = 3000
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb_sg.id]
+  }
+
+  ingress {
+    from_port       = 4000
+    to_port         = 4000
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb_sg.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = { Name = "chat-app-ecs-sg" }
+}
+
+# --------------------------
+# IAM Roles
+# --------------------------
 resource "aws_iam_role" "ecs_task_execution_role" {
   name = "ecs-task-execution-role-chat-app"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "ecs-tasks.amazonaws.com"
-        }
-      }
-    ]
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = { Service = "ecs-tasks.amazonaws.com" }
+    }]
   })
 }
 
@@ -133,23 +133,17 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
 resource "aws_ecr_repository" "web" {
   name                 = "chat-app-web"
   image_tag_mutability = "MUTABLE"
-
-  image_scanning_configuration {
-    scan_on_push = true
-  }
+  image_scanning_configuration { scan_on_push = true }
 }
 
 resource "aws_ecr_repository" "server" {
   name                 = "chat-app-server"
   image_tag_mutability = "MUTABLE"
-
-  image_scanning_configuration {
-    scan_on_push = true
-  }
+  image_scanning_configuration { scan_on_push = true }
 }
 
 # --------------------------
-# ECS Configuration
+# ECS Cluster
 # --------------------------
 resource "aws_ecs_cluster" "chat_cluster" {
   name = "chat-app-cluster"
@@ -160,108 +154,15 @@ resource "aws_ecs_cluster" "chat_cluster" {
   }
 }
 
-resource "aws_ecs_task_definition" "chat_app" {
-  family                   = "chat-app-task"
-  network_mode             = "awsvpc"
-  requires_compatibilities = ["FARGATE"]
-  cpu                      = 256
-  memory                   = 512
-  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
-
-  container_definitions = jsonencode([
-    {
-      name      = "web-container"
-      image     = "${aws_ecr_repository.web.repository_url}:latest"
-      essential = true
-      portMappings = [{
-        containerPort = 3000
-        hostPort      = 3000
-      }]
-      environment = [
-        {
-          name  = "NEXT_PUBLIC_API_URL",
-          value = "http://${aws_lb.server.dns_name}"
-        }
-      ]
-      logConfiguration = {
-        logDriver = "awslogs"
-        options = {
-          "awslogs-group"         = aws_cloudwatch_log_group.chat_app.name
-          "awslogs-region"        = "ap-southeast-1"
-          "awslogs-stream-prefix" = "web"
-        }
-      }
-    },
-    {
-      name      = "server-container"
-      image     = "${aws_ecr_repository.server.repository_url}:latest"
-      essential = true
-      portMappings = [{
-        containerPort = 4000
-        hostPort      = 4000
-      }],
-       environment = [
-         { name = "JWT_SECRET", value = var.jwt_secret_value },
-        { name = "DATABASE_URL", value = var.database_url_value }
-      ],
-      logConfiguration = {
-        logDriver = "awslogs"
-        options = {
-          "awslogs-group"         = aws_cloudwatch_log_group.chat_app.name
-          "awslogs-region"        = "ap"
-          "awslogs-stream-prefix" = "server"
-        }
-      }
-    }
-  ])
-}
-
-resource "aws_ecs_service" "chat_app" {
-  name            = "chat-app-service"
-  cluster         = aws_ecs_cluster.chat_cluster.id
-  task_definition = aws_ecs_task_definition.chat_app.arn
-  desired_count   = 1
-  launch_type     = "FARGATE"
-
-  network_configuration {
-    subnets          = aws_subnet.public.*.id
-    security_groups  = [aws_security_group.chat_app.id]
-    assign_public_ip = true
-  }
-
-  load_balancer {
-    target_group_arn = aws_lb_target_group.web.arn
-    container_name   = "web-container"
-    container_port   = 3000
-  }
-
-  load_balancer {
-    target_group_arn = aws_lb_target_group.server.arn
-    container_name   = "server-container"
-    container_port   = 4000
-  }
-}
-
 # --------------------------
-# Load Balancer Configuration
+# Load Balancer & Target Groups
 # --------------------------
-resource "aws_lb" "web" {
-  name               = "chat-app-web-lb"
+resource "aws_lb" "main" {
+  name               = "chat-app-main-lb"
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.chat_app.id]
+  security_groups    = [aws_security_group.alb_sg.id]
   subnets            = aws_subnet.public.*.id
-
-  enable_deletion_protection = false
-}
-
-resource "aws_lb" "server" {
-  name               = "chat-app-server-lb"
-  internal           = false
-  load_balancer_type = "application"
-  security_groups    = [aws_security_group.chat_app.id]
-  subnets            = aws_subnet.public.*.id
-
   enable_deletion_protection = false
 }
 
@@ -299,45 +200,133 @@ resource "aws_lb_target_group" "server" {
   }
 }
 
-resource "aws_lb_listener" "web" {
-  load_balancer_arn = aws_lb.web.arn
+resource "aws_lb_listener" "http" {
+  load_balancer_arn = aws_lb.main.arn
   port              = "80"
   protocol          = "HTTP"
 
   default_action {
+    type = "fixed-response"
+    fixed_response {
+      content_type = "text/plain"
+      message_body = "404 Not Found"
+      status_code  = "404"
+    }
+  }
+}
+
+resource "aws_lb_listener_rule" "web_rule" {
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 10
+
+  action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.web.arn
   }
+
+  condition {
+    path_pattern {
+      values = ["/", "/login", "/_next/*", "/static/*"]
+    }
+  }
 }
 
-resource "aws_lb_listener" "server" {
-  load_balancer_arn = aws_lb.server.arn
-  port              = "80"
-  protocol          = "HTTP"
+resource "aws_lb_listener_rule" "server_rule" {
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 20
 
-  default_action {
+  action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.server.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/api/*", "/trpc/*", "/health"]
+    }
   }
 }
 
 # --------------------------
-# CloudWatch Logs
+# ECS Task Definition
 # --------------------------
-resource "aws_cloudwatch_log_group" "chat_app" {
-  name              = "/ecs/chat-app"
-  retention_in_days = 7
+resource "aws_ecs_task_definition" "chat_app" {
+  family                   = "chat-app-task"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = 256
+  memory                   = 512
+  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+
+  container_definitions = jsonencode([
+    {
+      name      = "web-container"
+      image     = "${aws_ecr_repository.web.repository_url}:latest"
+      essential = true
+      portMappings = [{
+        containerPort = 3000
+      }]
+      environment = [
+        {
+          name  = "NEXT_PUBLIC_API_URL"
+          value = "http://${aws_lb.main.dns_name}"
+        }
+      ]
+    },
+    {
+      name      = "server-container"
+      image     = "${aws_ecr_repository.server.repository_url}:latest"
+      essential = true
+      portMappings = [{
+        containerPort = 4000
+      }]
+      environment = [
+        { name = "JWT_SECRET", value = var.jwt_secret_value },
+        { name = "DATABASE_URL", value = var.database_url_value }
+      ]
+    }
+  ])
+}
+
+# --------------------------
+# ECS Service
+# --------------------------
+resource "aws_ecs_service" "chat_app" {
+  name            = "chat-app-service"
+  cluster         = aws_ecs_cluster.chat_cluster.id
+  task_definition = aws_ecs_task_definition.chat_app.arn
+  desired_count   = 1
+  launch_type     = "FARGATE"
+
+  network_configuration {
+    subnets          = aws_subnet.public.*.id
+    security_groups  = [aws_security_group.ecs_sg.id]
+    assign_public_ip = true
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.web.arn
+    container_name   = "web-container"
+    container_port   = 3000
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.server.arn
+    container_name   = "server-container"
+    container_port   = 4000
+  }
+
+  depends_on = [
+    aws_lb_listener_rule.web_rule,
+    aws_lb_listener_rule.server_rule
+  ]
 }
 
 # --------------------------
 # Outputs
 # --------------------------
-output "web_lb_dns" {
-  value = aws_lb.web.dns_name
-}
-
-output "server_lb_dns" {
-  value = aws_lb.server.dns_name
+output "alb_dns" {
+  value = aws_lb.main.dns_name
 }
 
 output "ecr_web_repo_url" {
