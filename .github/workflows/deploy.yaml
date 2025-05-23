@@ -6,11 +6,15 @@ on:
       - production
 
 env:
-  AWS_REGION: ap-southeast-1
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
   ECR_WEB_REPO: chat-app-web
   ECR_SERVER_REPO: chat-app-server
   ECS_CLUSTER: chat-app-cluster
-  ECS_SERVICE: chat-app-service
+  ECS_SERVER_SERVICE: chat-app-server-service
+  ECS_WEB_SERVICE: chat-app-web-service
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -28,24 +32,33 @@ jobs:
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build & Push Web Image
-        run: |
-          docker build \
-            --target web \
-            --build-arg NEXT_PUBLIC_API_URL=https://${{ secrets.ALB_DNS_NAME }} \
-            --build-arg NEXT_PUBLIC_METERED_API_KEY=${{ secrets.METERED_API_KEY }} \
-            -t ${{ secrets.AWS_ECR_WEB_REPO}} .
-          docker push ${{ secrets.AWS_ECR_WEB_REPO}}
       - name: Build & Push Server Image
         run: |
-          docker build --target server -t ${{ secrets.AWS_ECR_SERVER_REPO}} . 
-          docker push ${{ secrets.AWS_ECR_SERVER_REPO}}
+          docker build --platform linux/amd64 --target server -t $ECR_REGISTRY/$ECR_SERVER_REPO:latest .
+          docker push $ECR_REGISTRY/$ECR_SERVER_REPO:latest
 
-      - name: Deploy to ECS
+      - name: Build & Push Web Image
+        run: |
+          docker build --platform linux/amd64 --target web \
+            --build-arg NEXT_PUBLIC_API_URL=http://${{ secrets.ALB_DNS_NAME }} \
+            --build-arg NEXT_PUBLIC_METERED_API_KEY=${{ secrets.METERED_API_KEY }} \
+            -t $ECR_REGISTRY/$ECR_WEB_REPO:latest .
+          docker push $ECR_REGISTRY/$ECR_WEB_REPO:latest
+
+      - name: Deploy Server to ECS
         run: |
           aws ecs update-service \
-              --cluster ${{ secrets.AWS_ECS_CLUSTER }} \
-              --service ${{ secrets.AWS_ECS_SERVICE }} \
-              --force-new-deployment \
-              --region ${{ secrets.AWS_REGION }} \
-              --desired-count 1
+            --cluster $ECS_CLUSTER \
+            --service $ECS_SERVER_SERVICE \
+            --force-new-deployment \
+            --desired-count 1 \
+            --region $AWS_REGION
+
+      - name: Deploy Web to ECS
+        run: |
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $ECS_WEB_SERVICE \
+            --force-new-deployment \
+            --desired-count 1 \
+            --region $AWS_REGION

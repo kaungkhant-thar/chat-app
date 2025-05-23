@@ -14,7 +14,7 @@ async function bootstrap() {
   const appContext = app.get(AppContextService);
 
   app.use(
-    '/trpc',
+    '/api/trpc',
     createExpressMiddleware({
       router: appRouter,
       createContext: (opts) =>

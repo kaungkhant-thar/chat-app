@@ -22,6 +22,7 @@ const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
 
   const { data: profile } = useQuery(trpc.profile.queryOptions());
   const { data: chats = [] } = useQuery(trpc.getChats.queryOptions());
+  console.log({ chats });
   const { data: chat, isLoading } = useQuery(
     trpc.getChatById.queryOptions({ chatId: params.id as string })
   );
