@@ -203,7 +203,7 @@ resource "aws_lb_listener_rule" "server_rule" {
 
   condition {
     path_pattern {
-      values = ["/api/*", "/trpc/*", "/health"]
+      values = ["/api/*", "/trpc/*", "/health", "/socket.io*"]
     }
   }
 }
@@ -377,6 +377,32 @@ resource "aws_cloudwatch_log_group" "server" {
   retention_in_days = 14
 }
 
+resource "aws_iam_policy" "ssm_access" {
+  name = "${var.project_name}-ssm-access-policy"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "ssm:GetParameters",
+          "ssm:GetParameter"
+        ],
+        Resource = [
+          aws_ssm_parameter.jwt_secret.arn,
+          aws_ssm_parameter.database_url.arn
+        ]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ssm_access_attach" {
+  role       = aws_iam_role.ecs_task_execution_role.name
+  policy_arn = aws_iam_policy.ssm_access.arn
+}
+
 
 output "alb_dns" {
   value = aws_lb.alb.dns_name
@@ -389,3 +415,5 @@ output "server_ecr_url" {
 output "web_ecr_url" {
   value = aws_ecr_repository.web.repository_url
 }
+
+
