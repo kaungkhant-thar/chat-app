@@ -7,13 +7,13 @@ on:
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
-  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-  ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
-  ECR_WEB_REPO: chat-app-web
-  ECR_SERVER_REPO: chat-app-server
-  ECS_CLUSTER: chat-app-cluster
-  ECS_SERVER_SERVICE: chat-app-server-service
-  ECS_WEB_SERVICE: chat-app-web-service
+  ECR_SERVER_REPO: ${{ secrets.AWS_ECR_SERVER_REPO }}
+  ECR_WEB_REPO: ${{ secrets.AWS_ECR_WEB_REPO }}
+  ECS_CLUSTER: ${{ secrets.AWS_ECS_CLUSTER }}
+  ECS_SERVER_SERVICE: ${{ secrets.AWS_ECS_SERVER_SERVICE }}
+  ECS_WEB_SERVICE: ${{ secrets.AWS_ECS_WEB_SERVICE }}
+  ALB_DNS_NAME: ${{ secrets.ALB_DNS_NAME }}
+  METERED_API_KEY: ${{ secrets.METERED_API_KEY }}
 
 jobs:
   deploy:
@@ -34,16 +34,16 @@ jobs:
 
       - name: Build & Push Server Image
         run: |
-          docker build --platform linux/amd64 --target server -t $ECR_REGISTRY/$ECR_SERVER_REPO:latest .
-          docker push $ECR_REGISTRY/$ECR_SERVER_REPO:latest
+          docker build --platform linux/amd64 --target server -t $ECR_SERVER_REPO:latest .
+          docker push $ECR_SERVER_REPO:latest
 
       - name: Build & Push Web Image
         run: |
           docker build --platform linux/amd64 --target web \
-            --build-arg NEXT_PUBLIC_API_URL=http://${{ secrets.ALB_DNS_NAME }} \
-            --build-arg NEXT_PUBLIC_METERED_API_KEY=${{ secrets.METERED_API_KEY }} \
-            -t $ECR_REGISTRY/$ECR_WEB_REPO:latest .
-          docker push $ECR_REGISTRY/$ECR_WEB_REPO:latest
+            --build-arg NEXT_PUBLIC_API_URL=http://${ALB_DNS_NAME} \
+            --build-arg NEXT_PUBLIC_METERED_API_KEY=${METERED_API_KEY} \
+            -t $ECR_WEB_REPO:latest .
+          docker push $ECR_WEB_REPO:latest
 
       - name: Deploy Server to ECS
         run: |
