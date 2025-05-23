@@ -1,18 +1,16 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { useTRPC } from "@web/lib/trpc";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@web/components/ui/button";
-import { ScrollArea } from "@web/components/ui/scroll-area";
-import { User } from "lucide-react";
-import Link from "next/link";
+import { useTRPC } from "@web/lib/trpc";
 import { useAuthStore } from "@web/store/auth";
-import { LogOut } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
   const trpc = useTRPC();
+  const router = useRouter();
   const { data: users = [] } = useQuery(trpc.findOtherUsers.queryOptions());
-  const { logout } = useAuthStore();
+  const createChatMutation = useMutation(trpc.createChat.mutationOptions());
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -28,9 +26,38 @@ export default function Home() {
               </p>
             </div>
           ) : (
-            <h1 className="text-lg font-medium mb-4">
-              Select a user to chat with
-            </h1>
+            <div>
+              <h1 className="text-lg font-medium mb-4">
+                Select a user to chat with
+              </h1>
+
+              {users.map((user) => (
+                <div
+                  key={user.id}
+                  className="flex items-center justify-between p-4 border-b"
+                >
+                  <div className="flex items-center">
+                    <div>
+                      <h2 className="text-lg font-medium">{user.name}</h2>
+                      <p className="text-sm text-muted-foreground">
+                        {user.email}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    loading={createChatMutation.isPending}
+                    onClick={async () => {
+                      const { id } = await createChatMutation.mutateAsync({
+                        userIds: [user.id || ""],
+                      });
+                      router.push(`/chat/${id}`);
+                    }}
+                  >
+                    Start Chat
+                  </Button>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       </main>

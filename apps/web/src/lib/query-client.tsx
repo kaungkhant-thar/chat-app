@@ -36,12 +36,14 @@ function getQueryClient() {
   }
 }
 
+console.log("API URL", process.env.NEXT_PUBLIC_API_URL);
+
 function useTrpcClient() {
   const [trpcClient] = useState(() =>
     createTRPCClient<AppRouter>({
       links: [
         httpBatchLink({
-          url: `${process.env.NEXT_PUBLIC_API_URL}/trpc`,
+          url: `${process.env.NEXT_PUBLIC_API_URL}/api/trpc`,
           headers() {
             const token = useAuthStore.getState().token;
             return {
