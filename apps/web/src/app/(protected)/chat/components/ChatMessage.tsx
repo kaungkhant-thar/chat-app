@@ -250,8 +250,8 @@ export const ChatMessage = ({
           <p
             className={cn(
               "break-words ",
-              isEmojiOnly ? "text-4xl leading-none" : "text-sm",
-              isCurrentUser ? "text-right" : "text-left"
+              isEmojiOnly ? "text-4xl leading-none" : "text-sm"
+              // isCurrentUser ? "text-right" : "text-left"
             )}
           >
             {content}

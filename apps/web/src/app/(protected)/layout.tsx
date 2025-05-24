@@ -22,9 +22,13 @@ const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
 
   const { data: profile } = useQuery(trpc.profile.queryOptions());
   const { data: chats = [] } = useQuery(trpc.getChats.queryOptions());
-  console.log({ chats });
   const { data: chat, isLoading } = useQuery(
-    trpc.getChatById.queryOptions({ chatId: params.id as string })
+    trpc.getChatById.queryOptions(
+      { chatId: params.id as string },
+      {
+        enabled: !!params.id && isAuthenticated,
+      }
+    )
   );
 
   const otherUser = chat?.users.find((u) => u.user.id !== profile?.id)?.user;
@@ -37,7 +41,7 @@ const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
 
   if (!hasHydrated) {
     return (
-      <div className="flex min-h-screen justify-center items-center">
+      <div className="flex min-h-dvh justify-center items-center">
         <Loader2 className="animate-spin" />
       </div>
     );
@@ -56,7 +60,7 @@ const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <div className="grid lg:grid-cols-[280px_1fr] h-screen overflow-hidden">
+    <div className="grid lg:grid-cols-[280px_1fr] min-h-dvh overflow-hidden">
       {isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
