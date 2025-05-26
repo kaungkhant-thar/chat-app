@@ -60,7 +60,7 @@ const ProtectedLayout = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <div className="grid lg:grid-cols-[280px_1fr] min-h-dvh overflow-hidden">
+    <div className="grid lg:grid-cols-[280px_1fr] min-h-dvh max-h-dvh overflow-hidden">
       {isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"

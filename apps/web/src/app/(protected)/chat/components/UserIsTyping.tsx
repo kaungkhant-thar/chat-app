@@ -54,24 +54,23 @@ const UserIsTyping = ({
 
   return (
     <div className="px-4 py-1">
-      <div className="flex items-center text-sm text-gray-500">
-        <span className="text-gray-400">{data.name} is typing</span>
+    <div className="px-6  inline bg-transparent">
+      <div className="flex  text-sm items-center text-gray-400 ">
+        <span className="">test is typing</span>
         <div className="flex ml-1">
-          <div className="flex">
-            {[0, 1, 2].map((i) => (
-              <span
-                key={i}
-                className="animate-bounce"
-                style={{
-                  animationDuration: "0.8s",
-                  animationDelay: `${i * 0.2}s`,
-                  opacity: 0.6,
-                }}
-              >
-                •
-              </span>
-            ))}
-          </div>
+          {[0, 1, 2].map((i) => (
+            <span
+              key={i}
+              className="animate-bounce text-2xl"
+              style={{
+                animationDuration: "0.8s",
+                animationDelay: `${i * 0.2}s`,
+                opacity: 0.6,
+              }}
+            >
+              .
+            </span>
+          ))}
         </div>
       </div>
     </div>
