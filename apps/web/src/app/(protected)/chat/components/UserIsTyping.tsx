@@ -53,7 +53,6 @@ const UserIsTyping = ({
   if (!data || !isTyping) return null;
 
   return (
-    <div className="px-4 py-1">
     <div className="px-6  inline bg-transparent">
       <div className="flex  text-sm items-center text-gray-400 ">
         <span className="">test is typing</span>
