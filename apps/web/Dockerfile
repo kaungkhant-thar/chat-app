@@ -1,4 +1,3 @@
-# Base stage: install deps, build both apps
 FROM node:slim AS base
 
 ARG NEXT_PUBLIC_API_URL
@@ -11,18 +10,21 @@ RUN npm install -g pnpm
 
 WORKDIR /app
 
+# Copy workspace config and lockfiles
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
-COPY apps/web/package.json ./apps/web/
-COPY libs/shared-schemas/package.json ./libs/shared-schemas/
+
+# Copy package.json and source code of involved packages BEFORE install
+COPY apps/web ./apps/web
+COPY libs/shared-schemas ./libs/shared-schemas
 
 RUN pnpm install
 
+# Copy the rest of the repo (if needed)
 COPY . .
 
 RUN pnpm build:web
 
-
-# Frontend runtime stage
+# Runtime image
 FROM node:slim AS web
 
 RUN npm install -g pnpm
