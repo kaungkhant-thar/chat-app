@@ -13,14 +13,13 @@ WORKDIR /app
 # Copy workspace config and lockfiles
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 
-# Copy package.json and source code of involved packages BEFORE install
+# Copy only necessary package.json and source for frontend and shared libs
 COPY apps/web ./apps/web
 COPY libs/shared-schemas ./libs/shared-schemas
 
 RUN pnpm install
 
-# Copy the rest of the repo (if needed)
-COPY . .
+# Do NOT copy the entire repo here; only frontend and shared libs are needed
 
 RUN pnpm build:web
 
