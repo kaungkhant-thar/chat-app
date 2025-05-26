@@ -95,7 +95,7 @@ export const MessageList = ({
   });
 
   return (
-    <div className="flex flex-1 gap-1 flex-col overflow-y-auto p-4">
+    <div className="flex flex-1 gap-1 flex-col overflow-y-auto p-4 max-h-[calc(100vh-140px)] ">
       {elements}
       <div ref={messageStartRef} />
     </div>
