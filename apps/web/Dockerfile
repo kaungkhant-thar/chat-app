@@ -10,16 +10,14 @@ RUN npm install -g pnpm
 
 WORKDIR /app
 
-# Copy workspace config and lockfiles
-COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+# Copy root config files including tsconfig.json
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json tsconfig.json ./
 
-# Copy only necessary package.json and source for frontend and shared libs
+# Copy the workspace source code you need
 COPY apps/web ./apps/web
 COPY libs/shared-schemas ./libs/shared-schemas
 
 RUN pnpm install
-
-# Do NOT copy the entire repo here; only frontend and shared libs are needed
 
 RUN pnpm build:web
 
