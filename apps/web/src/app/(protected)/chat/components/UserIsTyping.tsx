@@ -53,9 +53,9 @@ const UserIsTyping = ({
   if (!data || !isTyping) return null;
 
   return (
-    <div className="px-6  inline bg-transparent">
-      <div className="flex  text-sm items-center text-gray-400 ">
-        <span className="">test is typing</span>
+    <div className="px-6 inline bg-transparent absolute bottom-18">
+      <div className="flex  text-sm items-center text-gray-500 ">
+        <span className="">{data?.name} is typing</span>
         <div className="flex ml-1">
           {[0, 1, 2].map((i) => (
             <span

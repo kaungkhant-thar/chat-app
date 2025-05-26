@@ -169,7 +169,7 @@ export const ChatMessage = ({
   return (
     <div
       className={cn(
-        "flex w-full gap-2 px-4",
+        "flex w-full gap-2 lg:px-4",
         isCurrentUser ? "flex-row-reverse" : "flex-row"
       )}
     >
